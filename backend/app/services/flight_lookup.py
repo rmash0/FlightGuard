@@ -154,7 +154,7 @@ async def _live_lookup(number: str, departure_date: date) -> FlightLookupRespons
     prediction = await _optional_service(
         "app.services.delay_predictor", "predict_delay", flight, DelayPrediction
     )
-    emissions = await _optional_service("app.services.emissions", "get_emissions", flight, Emissions)
+    emissions = await _optional_service("app.services.emissions", "get_emissions_for_flight", flight, Emissions)
     return FlightLookupResponse(flight=flight, prediction=prediction, emissions=emissions)
 
 

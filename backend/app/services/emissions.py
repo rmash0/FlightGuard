@@ -268,3 +268,21 @@ async def get_emissions(
         async with _cache_lock:
             if _inflight.get(cache_key) is task:
                 del _inflight[cache_key]
+
+async def get_emissions_for_flight(flight):
+    flight_number = flight.number
+
+    if flight_number.upper().startswith(flight.airline.iata.upper()):
+        flight_number = flight_number[len(flight.airline.iata):]
+
+    return await get_emissions(
+        origin=flight.origin.iata,
+        destination=flight.destination.iata,
+        carrier=flight.airline.iata,
+        flight_number=int(flight_number),
+        departure_date=flight.date,
+        origin_lat=flight.origin.lat,
+        origin_lon=flight.origin.lon,
+        destination_lat=flight.destination.lat,
+        destination_lon=flight.destination.lon,
+    )
