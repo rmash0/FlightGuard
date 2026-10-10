@@ -1,4 +1,5 @@
-import "./BubbleBackground.css";
+import "./SkyBackground.css";
+import Skyline from "./Skyline";
 
 const BUBBLE_COUNT = 14;
 
@@ -11,15 +12,18 @@ const BUBBLES = Array.from({ length: BUBBLE_COUNT }, (_, i) => ({
   delay: `${-((i * 5) % 22)}s`,
 }));
 
-// Decorative full-screen layer: rising bubbles by day, stars by night.
-function BubbleBackground() {
+// Decorative full-screen scene behind the app: stars and a full moon at night,
+// a city skyline along the bottom, and rising bubbles in front.
+function SkyBackground() {
   return (
-    <div className="bubble-background" aria-hidden="true">
-      <div className="bubble-background__stars" />
+    <div className="sky-background" aria-hidden="true">
+      <div className="sky-background__stars" />
+      <div className="sky-background__moon" />
+      <Skyline />
       {BUBBLES.map((bubble, i) => (
         <span
           key={i}
-          className="bubble-background__bubble"
+          className="sky-background__bubble"
           style={{
             left: bubble.left,
             width: bubble.size,
@@ -33,4 +37,4 @@ function BubbleBackground() {
   );
 }
 
-export default BubbleBackground;
+export default SkyBackground;

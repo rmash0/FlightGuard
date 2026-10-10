@@ -63,6 +63,17 @@
     linear-gradient(180deg, #2a8ad8 0%, #74c3f2 34%, #d6f0ff 70%, #c4ecab 100%);
   --aero-bubble-opacity: 0.85;
   --aero-stars-opacity: 0;
+  --aero-moon-opacity: 0;
+
+  /* Skyline: glassy blue-white towers by day */
+  --aero-skyline-back: rgba(255, 255, 255, 0.42);
+  --aero-skyline-front: rgba(78, 160, 220, 0.5);
+  --aero-skyline-window: #fff;
+  --aero-skyline-window-opacity: 0.45;
+  --aero-skyline-lit-opacity: 0.6;
+  --aero-skyline-detail: rgba(255, 255, 255, 0.95);
+  --aero-skyline-hill: rgba(112, 196, 82, 0.75);
+  --aero-beacon-opacity: 0;
 
   color-scheme: light;
 }
@@ -102,6 +113,17 @@
     linear-gradient(180deg, #030817 0%, #0b1440 55%, #17154d 100%);
   --aero-bubble-opacity: 0.35;
   --aero-stars-opacity: 1;
+  --aero-moon-opacity: 1;
+
+  /* Skyline: dark silhouettes with warm lit windows */
+  --aero-skyline-back: rgba(38, 50, 118, 0.6);
+  --aero-skyline-front: #0b1236;
+  --aero-skyline-window: #ffd77a;
+  --aero-skyline-window-opacity: 0.06;
+  --aero-skyline-lit-opacity: 0.9;
+  --aero-skyline-detail: #8fa6cf;
+  --aero-skyline-hill: #081a2e;
+  --aero-beacon-opacity: 1;
 
   color-scheme: dark;
 }

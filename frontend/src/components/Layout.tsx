@@ -1,15 +1,15 @@
 import { NavLink, Outlet } from "react-router";
 
 import { APP_NAME } from "../config";
-import BubbleBackground from "./aero/BubbleBackground";
 import GlassPanel from "./aero/GlassPanel";
+import SkyBackground from "./aero/SkyBackground";
 import ThemeToggle from "./aero/ThemeToggle";
 import "./Layout.css";
 
 function Layout() {
   return (
     <div className="app-shell">
-      <BubbleBackground />
+      <SkyBackground />
 
       <GlassPanel as="header" className="app-header">
         <NavLink to="/" className="app-brand">

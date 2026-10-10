@@ -1,0 +1,150 @@
+.sky-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Bubbles */
+
+.sky-background__bubble {
+  position: absolute;
+  bottom: -90px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 28%,
+    rgba(255, 255, 255, 0.95) 0 7%,
+    rgba(255, 255, 255, 0.3) 18%,
+    rgba(150, 215, 255, 0.12) 58%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.45);
+  opacity: var(--aero-bubble-opacity);
+  animation-name: bubble-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes bubble-rise {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(22px, -58vh, 0);
+  }
+  100% {
+    transform: translate3d(-12px, calc(-100vh - 140px), 0);
+  }
+}
+
+/* Stars (night only) */
+
+.sky-background__stars {
+  position: absolute;
+  inset: 0;
+  opacity: var(--aero-stars-opacity);
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #fff, transparent),
+    radial-gradient(1px 1px at 27% 62%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1.5px 1.5px at 44% 12%, #fff, transparent),
+    radial-gradient(1px 1px at 58% 41%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 73% 23%, #fff, transparent),
+    radial-gradient(1px 1px at 86% 67%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 93% 9%, #fff, transparent),
+    radial-gradient(1px 1px at 6% 84%, rgba(255, 255, 255, 0.6), transparent);
+  background-size: 480px 480px;
+  transition: opacity 0.6s ease;
+}
+
+/* Full moon (night only) */
+
+.sky-background__moon {
+  position: absolute;
+  top: 100px;
+  right: 3%;
+  width: clamp(64px, 8vw, 104px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 36%, rgba(196, 190, 160, 0.55) 0 9%, transparent 12%),
+    radial-gradient(circle at 63% 58%, rgba(196, 190, 160, 0.45) 0 13%, transparent 16%),
+    radial-gradient(circle at 44% 76%, rgba(196, 190, 160, 0.4) 0 6%, transparent 9%),
+    radial-gradient(circle at 70% 28%, rgba(196, 190, 160, 0.35) 0 5%, transparent 8%),
+    radial-gradient(circle at 38% 32%, #fffdf2, #efe9cf 65%, #d8d0ad);
+  box-shadow:
+    0 0 36px 8px rgba(255, 248, 220, 0.35),
+    0 0 120px 40px rgba(170, 195, 255, 0.16);
+  opacity: var(--aero-moon-opacity);
+  transition: opacity 0.6s ease;
+}
+
+/* Skyline */
+
+.skyline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: clamp(140px, 24vh, 240px);
+}
+
+.skyline__back {
+  fill: var(--aero-skyline-back);
+}
+
+.skyline__front {
+  fill: var(--aero-skyline-front);
+}
+
+.skyline__windows rect,
+.skyline__windows path {
+  fill: var(--aero-skyline-window);
+  opacity: var(--aero-skyline-window-opacity);
+}
+
+.skyline__windows .is-lit {
+  opacity: var(--aero-skyline-lit-opacity);
+}
+
+.skyline__turbines {
+  fill: var(--aero-skyline-detail);
+}
+
+.skyline__hill {
+  fill: var(--aero-skyline-hill);
+}
+
+.skyline__rotor {
+  animation: rotor-spin 9s linear infinite;
+}
+
+@keyframes rotor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skyline__beacon {
+  fill: var(--aero-coral);
+  opacity: var(--aero-beacon-opacity);
+  animation: beacon-blink 2.4s ease-in-out infinite;
+}
+
+@keyframes beacon-blink {
+  50% {
+    fill-opacity: 0.15;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-background__bubble {
+    display: none;
+  }
+
+  .skyline__rotor,
+  .skyline__beacon {
+    animation: none;
+  }
+}
