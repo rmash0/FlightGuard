@@ -113,11 +113,8 @@ function FlightResults({ number, date }: { number: string; date: string }) {
           )}
         </GlassPanel>
 
-        {/* EmissionsCard (Role D) renders its content only; this panel and heading wrap it. */}
-        <GlassPanel as="section" className="results-panel" aria-labelledby="eco-title">
-          <h2 id="eco-title">Carbon footprint</h2>
-          <EmissionsCard emissions={emissions} />
-        </GlassPanel>
+        {/* EmissionsCard (Role D) renders its own GlassPanel and heading, including the null state. */}
+        <EmissionsCard emissions={emissions} />
       </div>
     </>
   );

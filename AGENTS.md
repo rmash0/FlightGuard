@@ -166,7 +166,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
     - A compact search bar at the top, prefilled from the URL.
     - `FlightSummary`: route card with airport-local times, duration, a status badge, and the scheduled time struck through when the airline posts a new one.
     - The "Delay forecast" panel: `DelayGauge` (half-circle dial, risk badge, estimated minutes, reported-delay note) plus `ReasonList` (high impact first).
-    - The "Carbon footprint" panel wrapping Role D's `EmissionsCard`.
+    - Role D's `EmissionsCard`, which brings its own panel, next to the delay forecast.
     - A loading orb, and a friendly message for each API error (404, 422, 502, 503, network). "Try again" only appears for 502 and network errors.
     - Empty-state copy when `prediction` or `emissions` is `null`.
     - Messy URLs (`/flight/dl-1234/...`) redirect to the clean form. Invalid flight numbers or dates in the URL show a message without calling the API.
@@ -187,9 +187,8 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
     - `.env.local` overrides `.env.example`, so to test against the real backend, set `VITE_USE_MOCKS=false` there (or prefix the command) and restart Vite.
   - `types/api.ts` mirrors the §8 contract, and `mocks/lookup.json` is a sample response.
 - **Vite dev proxy:** `/api` → `http://127.0.0.1:8000`, so the frontend uses relative URLs only and CORS isn't involved in dev.
-- `components/eco/EmissionsCard.tsx` is a placeholder version for Role D (props `{ emissions: Emissions | null }`).
-  - `ResultsPage` already wraps it in a `GlassPanel` with the "Carbon footprint" heading, so EmissionsCard should render **content only**: no outer panel, no `h2`.
-  - It must handle `null` itself, with a short empty-state message.
+- `components/eco/EmissionsCard.tsx` (Role D) is built: cabin-class picker, kg CO2e per passenger, estimate tier, `EcoComparison`, and the source note. Props: `{ emissions: Emissions | null }`.
+  - It renders **its own** `GlassPanel` and "Carbon Footprint" heading, including the `null` state. `ResultsPage` places it straight into the results grid without wrapping it.
 - `config.ts` holds `APP_NAME`. `<title>` is "FlightGuard".
 - **Aero theme:** done. Tokens for light and dark are in `index.css`, the shared components are in `components/aero/`, and the glass nav bar, sky background (bubbles, city skyline with control tower and wind turbines, stars and a full moon at night), theme toggle and Aero favicon are in place. Page content is centered. See §7 "Using the theme".
 - `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` (Role D) is still unstyled.
