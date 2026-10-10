@@ -10,8 +10,6 @@ import {
 } from "../../utils/flightSearch";
 import "./FlightSearchForm.css";
 
-const EXAMPLE_FLIGHTS = ["DL1234", "AA100", "B6 623"];
-
 function formatDate(value: string): string {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day).toLocaleDateString(undefined, {
@@ -95,20 +93,6 @@ function FlightSearchForm() {
           {showDateError && <p id="flight-date-error">{dateError}</p>}
         </div>
       )}
-
-      <p className="flight-search__examples text-muted">
-        Try{" "}
-        {EXAMPLE_FLIGHTS.map((example) => (
-          <button
-            key={example}
-            type="button"
-            className="flight-search__example"
-            onClick={() => setFlightInput(example)}
-          >
-            {example}
-          </button>
-        ))}
-      </p>
     </form>
   );
 }

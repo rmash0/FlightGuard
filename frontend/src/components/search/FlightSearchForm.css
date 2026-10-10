@@ -44,28 +44,6 @@
   margin: 0 0 4px;
 }
 
-.flight-search__examples {
-  margin-top: 16px;
-  font-size: 0.95rem;
-}
-
-.flight-search__example {
-  margin: 0 4px;
-  padding: 3px 12px;
-  border: 1px solid var(--aero-glass-border);
-  border-radius: var(--aero-radius-pill);
-  color: var(--aero-text);
-  font: inherit;
-  font-weight: 600;
-  background-color: var(--aero-glass-strong);
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.flight-search__example:hover {
-  background-color: var(--aero-glass-bg);
-}
-
 @media (max-width: 640px) {
   .flight-search__fields {
     grid-template-columns: 1fr;

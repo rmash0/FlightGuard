@@ -154,13 +154,15 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 **Frontend** (`frontend/src/`)
 - **Routing:** React Router v8 is set up in `main.tsx` (`BrowserRouter`) and `App.tsx`. Every route from §8 exists, inside `components/Layout.tsx` (header + nav + `<Outlet />`).
 - **Pages:**
-  - `SearchPage` is done: a hero panel with `FlightSearchForm` and three feature cards.
-  - The form validates the flight number and date with inline errors, has example-flight buttons, and navigates to `/flight/:number/:date`.
+  - `SearchPage` is done: a hero panel with `FlightSearchForm` and a compact row of feature pills (`<FeatureList variant="compact" />`). It's kept light so the skyline stays visible.
+  - The form validates the flight number and date with inline errors and navigates to `/flight/:number/:date`.
   - Parsing lives in `utils/flightSearch.ts`:
     - `normalizeFlightNumber` accepts `dl 1234`, `DL-1234`, `B6 623` and `DAL1234`, and returns uppercase with no spaces, or `null`.
     - The search date range is 7 days back to 30 days ahead, set by `SEARCH_PAST_DAYS` / `SEARCH_FUTURE_DAYS`.
   - `ResultsPage` calls `lookupFlight` and renders bare text with loading, error and `null` states.
-  - `MapPage` and `AboutPage` are placeholders. `NotFoundPage` is done.
+  - `AboutPage` has an intro, full feature cards (`<FeatureList variant="cards" />`) and data credits. Model accuracy and methodology are still to come.
+  - `MapPage` is a placeholder. `NotFoundPage` is done.
+  - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
   - `api/client.ts` has `lookupFlight(number, date, signal?)` and `ApiError`, plus the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
   - `types/api.ts` mirrors the §8 contract, and `mocks/lookup.json` is a sample response.
