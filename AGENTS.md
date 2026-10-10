@@ -163,7 +163,8 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - **Vite dev proxy:** `/api` → `http://127.0.0.1:8000`, so the frontend uses relative URLs only and CORS isn't involved in dev.
 - `components/eco/EmissionsCard.tsx` is a placeholder version for Role D (props `{ emissions: Emissions | null }`).
 - `config.ts` holds `APP_NAME`. `<title>` is "FlightGuard".
-- No Aero theme yet. `index.css` is a minimal neutral base, and the Vite template files have been removed.
+- **Aero theme:** done. Tokens for light and dark are in `index.css`, the shared components are in `components/aero/`, and the glass nav bar, bubble background, theme toggle and Aero favicon are in place. See §7 "Using the theme".
+- `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` (Role D) is still unstyled.
 
 **Known gotchas**
 - OpenSky anonymous access is heavily rate-limited. Cache about 15 s and keep bounding boxes small.
@@ -233,10 +234,36 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 | Icons | Glossy, rounded, slightly 3D. Eco stats use leaf/droplet icons. |
 | Motion | Floating bubbles, soft fades, shine sweep on hover. Respect `prefers-reduced-motion`. |
 
-**Implementation:**
-- Design tokens are CSS custom properties in `frontend/src/index.css`: `:root` for light, `[data-theme="dark"]` for dark, defaulting to `prefers-color-scheme`.
-- Shared components: `GlassPanel`, `AeroButton`, `BubbleBackground`, `ThemeToggle`. Plain CSS, no UI library.
-- **Eco tie-in:** low-CO2 flights get a green leaf glow, high-CO2 an amber tint. Delay risk uses aqua (low) → amber → coral (high), never harsh red.
+**Eco tie-in:** low-CO2 flights get a green leaf glow, high-CO2 an amber tint. Delay risk uses aqua (low) → amber → coral (high), never harsh red.
+
+### Using the theme (built, in `frontend/src`)
+**How theming works**
+- The theme lives on `<html data-theme="light|dark">`. An inline script in `index.html` sets it before first paint, from `localStorage["theme"]` or the OS setting. `ThemeToggle` switches it and saves the choice.
+- Styling for dark mode means **overriding tokens** under `:root[data-theme='dark']` (or `:root[data-theme='dark'] .your-class`). Never use `@media (prefers-color-scheme)` in components.
+
+**Tokens** (`index.css`, always `var(--aero-*)`)
+
+| Group | Tokens |
+|---|---|
+| Text | `--aero-text`, `--aero-text-muted`, `--aero-heading`, `--aero-heading-glow`, `--aero-link` |
+| Palette | `--aero-accent`, `--aero-accent-strong`, `--aero-leaf`, `--aero-amber`, `--aero-coral` |
+| Delay risk | `--aero-risk-low` / `-medium` / `-high` |
+| Eco | `--aero-eco-low` (green), `--aero-eco-high` (amber) |
+| Glass | `--aero-glass-bg`, `--aero-glass-strong`, `--aero-glass-border`, `--aero-glass-inner`, `--aero-gloss`, `--aero-shadow`, `--aero-blur` |
+| Shape | `--aero-radius-sm` / `-md` / `-lg` / `-pill` |
+| Focus | `--aero-focus` (box-shadow ring) |
+| Gel | `--aero-gel-primary-*`, `--aero-gel-eco-*` (`-top`, `-bottom`, `-border`, `-glow`) |
+
+**Components** (`components/aero/`)
+- `<GlassPanel as="section" className="...">`: frosted card, the base for every panel. `as` can be `div` (default), `section`, `article`, `aside`, `header` or `footer`. Accepts all div props. Adjacent panels get a 20px gap automatically.
+- `<AeroButton variant="primary|eco|glass" size="md|lg">`: glossy gel button with all normal button props. `type` defaults to `"button"`. Use `eco` (green) for eco actions.
+- `aeroButtonClass(variant?, size?, className?)` from `components/aero/classes.ts`: use this to style a **link** as an Aero button, e.g. `<Link className={aeroButtonClass("primary", "lg")}>`. `cx(...)` from the same file joins class names.
+- `<BubbleBackground />` and `<ThemeToggle />` are already rendered by `Layout`. Don't add them again.
+- Utility class: `.text-muted`.
+
+**Gotchas**
+- When writing `backdrop-filter` with a `-webkit-` prefix, put the **prefixed line first**. The build minifier keeps only the last of the pair, and Chrome/Edge ignore the prefixed version. Dev mode won't show the problem.
+- Respect `prefers-reduced-motion` for any animation.
 
 ---
 
