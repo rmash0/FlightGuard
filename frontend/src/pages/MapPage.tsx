@@ -130,18 +130,15 @@ function MapPage() {
         display: "flex",
         flexDirection: "column",
         gap: 24,
-        // .app-main centers text site-wide; this dashboard layout is designed left-aligned.
-        textAlign: "left",
       }}
     >
       <GlassPanel as="section">
         <div
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 16,
+            gap: 12,
           }}
         >
           <div>
@@ -198,7 +195,7 @@ function MapPage() {
         }}
       >
         <GlassPanel>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center" }}>
             <Plane size={20} color="var(--aero-accent)" />
             <span style={{ color: "var(--aero-text-muted)" }}>
               Aircraft in view
@@ -217,7 +214,7 @@ function MapPage() {
         </GlassPanel>
 
         <GlassPanel>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center" }}>
             <MapPin size={20} color="var(--aero-leaf)" />
             <span style={{ color: "var(--aero-text-muted)" }}>
               Airports loaded
@@ -236,7 +233,7 @@ function MapPage() {
         </GlassPanel>
 
         <GlassPanel>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center" }}>
             <RefreshCw size={20} color="var(--aero-accent)" />
             <span style={{ color: "var(--aero-text-muted)" }}>
               Refresh interval
