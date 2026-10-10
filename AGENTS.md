@@ -151,7 +151,8 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `GET /api/flights/lookup` accepts supported US passenger airline codes only and requires the origin or destination to be in the US. It caches successful lookups for 10 minutes and returns clear 404/422/502/503 errors. Live mode needs `AERODATABOX_API_KEY`.
 - `models/schemas.py` mirrors the TypeScript lookup contract. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Live lookup calls Role D's emissions service; prediction remains `null` until Role C adds its service hook below.
 - `services/cache.py` provides an in-process async TTL cache with one in-flight fetch per key. Each backend process has its own cache.
-- `clients/opensky_client.py`: `get_aircraft_in_area(lamin, lamax, lomin, lomax)` calls OpenSky anonymously. Not wired to a route.
+- `GET /api/flights/live` serves OpenSky aircraft within the map viewport from a 60-second backend cache.
+- `GET /api/flights/live/{icao24}/details` looks up flight number and origin/destination via AeroDataBox only when a plane popup opens. Results, including unavailable matches, are cached for 10 minutes per aircraft and callsign; an unconfirmed route is never guessed.
 
 **Frontend** (`frontend/src/`)
 - **Routing:** React Router v8 is set up in `main.tsx` (`BrowserRouter`) and `App.tsx`. Every route from §8 exists, inside `components/Layout.tsx` (header + nav + `<Outlet />`).
@@ -173,10 +174,10 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `hooks/useFlightLookup.ts` wraps `lookupFlight` with loading/error/ready state and `retry()`. `utils/format.ts` has the time, date and duration formatters.
   - The Search nav tab stays highlighted on `/flight/*`.
   - `AboutPage` has an intro, full feature cards (`<FeatureList variant="cards" />`) and data credits. Model accuracy and methodology are still to come.
-  - `MapPage` is a placeholder. `NotFoundPage` is done.
+  - `MapPage` shows live aircraft and airports. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
-  - `api/client.ts` has `lookupFlight(number, date, signal?)` and `ApiError` (with `.status`), plus the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status`) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
   - **Mock test flights** (mocks only):
     - `ZZ404`, `ZZ502`, `ZZ503` return those errors.
     - `ZZ1` has `null` prediction and emissions.
@@ -311,10 +312,13 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 | GET | `/api/predict?number=...&date=...` | Prediction | `DelayPrediction` |
 | GET | `/api/eco/emissions?carrier=DL&number=1234&origin=RDU&destination=ATL&date=...` | Eco | `Emissions` |
 | GET | `/api/flights/live?lamin&lamax&lomin&lomax` | Eco/Map | live aircraft (cached) |
+| GET | `/api/flights/live/{icao24}/details?callsign=DAL214` | Eco/Map | `LiveFlightDetails` (below), fetched on popup open |
 | GET | `/api/airports` | Eco/Map | trimmed US airport list |
 | GET | `/api/airports/{iata}` | Prediction | weather + FAA status + risk |
 
 `/api/flights/lookup` calls the flight client and then the prediction and emissions services. The frontend makes **one call** for the results page.
+
+`LiveFlightDetails` has `flight_number`, `origin`, and `destination`, each a nullable string. For example: `{ "flight_number": "DL214", "origin": "ATL — Hartsfield-Jackson Atlanta International Airport", "destination": "FCO — Leonardo da Vinci International Airport" }`. When the provider cannot confirm that an active flight matches both the aircraft and callsign, all three fields are `null`. The map keeps altitude, speed, and heading from OpenSky without a details lookup until the popup opens.
 
 **Backend service hooks:** Role C exposes `async predict_delay(flight: Flight) -> DelayPrediction | None` in `services/delay_predictor.py`. Role D exposes `async get_emissions_for_flight(flight: Flight) -> Emissions | None` in `services/emissions.py`. The lookup route calls either when its module exists; a failure in one service yields `null` for that field.
 
