@@ -164,8 +164,7 @@ function EmissionsCard({ emissions }: EmissionsCardProps) {
       </div>
 
       <div>
-        <label
-          htmlFor="emissions-cabin"
+        <div
           style={{
             display: "block",
             color: "var(--aero-text)",
@@ -175,31 +174,50 @@ function EmissionsCard({ emissions }: EmissionsCardProps) {
           }}
         >
           Cabin Class
-        </label>
+        </div>
 
-        <select
-          id="emissions-cabin"
-          value={selectedCabin}
-          onChange={(event) =>
-            setSelectedCabin(event.target.value as CabinClass)
-          }
+        <div
+          role="group"
+          aria-label="Cabin class"
           style={{
-            width: "100%",
-            padding: "12px 14px",
-            borderRadius: "var(--aero-radius-md)",
-            border: "1px solid var(--aero-glass-border)",
-            background: "var(--aero-glass-strong)",
-            color: "var(--aero-text)",
-            fontSize: 14,
-            cursor: "pointer",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+            gap: 10,
           }}
         >
-          {CABINS.map((cabin) => (
-            <option key={cabin.value} value={cabin.value}>
-              {cabin.label}
-            </option>
-          ))}
-        </select>
+          {CABINS.map((cabin) => {
+            const active = selectedCabin === cabin.value;
+
+            return (
+              <button
+                key={cabin.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setSelectedCabin(cabin.value)}
+                style={{
+                  padding: "13px 12px",
+                  borderRadius: "var(--aero-radius-md)",
+                  border: active
+                    ? "1px solid var(--aero-accent)"
+                    : "1px solid var(--aero-glass-border)",
+                  background: active
+                    ? "var(--aero-accent)"
+                    : "var(--aero-glass-strong)",
+                  color: active ? "#ffffff" : "var(--aero-text)",
+                  fontSize: 13,
+                  fontWeight: active ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  boxShadow: active
+                    ? "0 4px 16px rgba(30, 130, 220, 0.25)"
+                    : "none",
+                }}
+              >
+                {cabin.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <EcoComparison
