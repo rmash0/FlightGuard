@@ -101,11 +101,14 @@ async def live_aircraft(
             detail=result["detail"],
         )
 
-    result["flights"] = [
+    filtered_flights = [
         flight
         for flight in result["flights"]
         if lamin <= flight["latitude"] <= lamax
         and lomin <= flight["longitude"] <= lomax
     ]
 
-    return result
+    return {
+        **result,
+        "flights": filtered_flights,
+    }
