@@ -138,7 +138,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 | `GOOGLE_TIM_API_KEY` | Google Cloud key with the Travel Impact Model API enabled |
 | `OPEN_METEO_BASE_URL` | already in `.env.example` |
 | `OPENSKY_*` | already in `.env.example`. Unused until we get an account |
-| `DEMO_MODE` | `true` = serve recorded fixtures instead of calling APIs |
+| `DEMO_MODE` | `true` = serve an offline fixture instead of calling APIs |
 
 ---
 
@@ -148,8 +148,10 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `main.py`: FastAPI app "FlightGuard API". CORS allows `http://localhost:5173` only.
 - `GET /` and `GET /api/health` → `{"status": "ok"}`.
 - `api/routes_flights.py`: `GET /api/flights/demo` returns one hard-coded demo flight.
+- `GET /api/flights/lookup` now normalizes a US flight from AeroDataBox to the §8 schema, caches successful lookups for 10 minutes, and returns clear 404/502/503 errors. Live mode needs `AERODATABOX_API_KEY`.
+- `models/schemas.py` mirrors the TypeScript lookup contract. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Prediction and emissions are `null` in live mode until Roles C and D add their service hooks below.
+- `services/cache.py` provides an in-process async TTL cache with one in-flight fetch per key. Each backend process has its own cache.
 - `clients/opensky_client.py`: `get_aircraft_in_area(lamin, lamax, lomin, lomax)` calls OpenSky anonymously. Not wired to a route.
-- `models/` and `services/` are empty.
 
 **Frontend** (`frontend/src/`)
 - **Routing:** React Router v8 is set up in `main.tsx` (`BrowserRouter`) and `App.tsx`. Every route from §8 exists, inside `components/Layout.tsx` (header + nav + `<Outlet />`).
@@ -174,6 +176,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 
 **Known gotchas**
 - OpenSky anonymous access is heavily rate-limited. Cache about 15 s and keep bounding boxes small.
+- Existing `api/eco.py` reads `GOOGLE_API_KEY`, while the agreed environment variable is `GOOGLE_TIM_API_KEY`; Role D needs to reconcile this in the eco service.
 
 ---
 
@@ -182,11 +185,11 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 ### 6.1 Flight Search (home page) — data source
 **Recommendation: AeroDataBox via RapidAPI.**
 - Its "flight status" endpoint looks up a flight by number + date. It returns scheduled/estimated/actual times, origin/destination, status and aircraft type: everything the prediction and CO2 features need.
-- **Free Basic tier (about 600 units/month)** is enough for development if we cache. Upgrade to **Pro (about $5–8/month)** before the demo. **Budget approved: about $10 total.** Units ≠ requests: flight status costs extra when a flight plan is included. Check the live pricing page before subscribing.
+- **Free Basic tier (400 units/month as of October 2026)** is enough for development if we cache. Upgrade to **Pro ($8/month as of October 2026)** before the demo. **Budget approved: about $10 total.** Units ≠ requests; the single-day flight status endpoint is Tier 2. Basic requires visible AeroDataBox attribution. Check the [live pricing page](https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing) before subscribing.
 - Backup: **FlightAware AeroAPI Personal** (pay per query, with about $5/month of usage credit, max 10 result sets/min, no historical data). Better US data, but tighter limits and more setup.
 - Not recommended: AviationStack (free tier is about 100 requests/month and too limited).
 
-**Rules:** cache lookups by `(flight_number, date)` for about 10 minutes. Record real responses into `backend/app/data/fixtures/` so **demo mode** works if the API or Wi-Fi fails during judging.
+**Rules:** cache lookups by `(flight_number, date)` for about 10 minutes. A synthetic fixture is checked in for offline demo mode. [AeroDataBox Basic/Pro terms](https://aerodatabox.com/2026-09-terms-update) currently cap retained provider data at 7 days; any real response recorded for judging must be deleted within that window. Do not commit provider responses as permanent fixtures.
 
 ### 6.2 Delay Prediction
 "Delayed" = **arrival 15+ minutes late** (the FAA/BTS standard definition).
@@ -293,6 +296,8 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 
 `/api/flights/lookup` calls the flight client and then the prediction and emissions services. The frontend makes **one call** for the results page.
 
+**Backend service hooks:** Role C exposes `async predict_delay(flight: Flight) -> DelayPrediction | None` in `services/delay_predictor.py`. Role D exposes `async get_emissions(flight: Flight) -> Emissions | None` in `services/emissions.py`. The lookup route calls either when its module exists; a failure in one service yields `null` for that field.
+
 ### `FlightLookupResponse` (shape to match in Pydantic `models/` and TS `types/`)
 ```json
 {
@@ -388,7 +393,7 @@ The team has assigned these roles. Fill in the Owner column so AI agents know wh
 | Role | Owner | Owns | MVP deliverables | Stretch |
 |---|---|---|---|---|
 | **A — Frontend and Aero Theme** | _TBD_ | `frontend/` UI, design system, pages | Vite proxy fix; React Router setup (`Layout`, routes, nav); design tokens (light and dark); `GlassPanel`/`AeroButton`/`SkyBackground`/`ThemeToggle`; Search page; Results page rendering `FlightLookupResponse` from mocks, then the real API; loading/error/empty states | Sounds/music toggle, animated sky, splash screen, mobile layout |
-| **B — Flight Data and Backend Core** | _TBD_ | `clients/aerodatabox_client.py`, `services/flight_lookup.py`, `cache.py`, `models/schemas.py`, demo mode | Pydantic schemas for the contract; AeroDataBox client; `/api/flights/lookup` (combines prediction and emissions); TTL cache; recorded fixtures + `DEMO_MODE`; `.env.example` updates | "Recent searches", hosting/deploy |
+| **B — Flight Data and Backend Core** | _TBD_ | `clients/aerodatabox_client.py`, `services/flight_lookup.py`, `cache.py`, `models/schemas.py`, demo mode | Pydantic schemas for the contract; AeroDataBox client; `/api/flights/lookup` (combines prediction and emissions); TTL cache; offline fixture + `DEMO_MODE`; `.env.example` updates | "Recent searches", hosting/deploy |
 | **C — Delay Prediction and ML** | _TBD_ | `services/delay_predictor.py`, weather/FAA clients, `backend/ml/` | Open-Meteo + FAA NAS clients; heuristic v1 with reasons; `/api/predict`; `/api/airports/{iata}` | **BTS model v2** (`ml/train.py`, joblib model, blended prediction), accuracy stat for the About page, historical delay chart data |
 | **D — Eco and Map** | _TBD_ | `services/emissions.py`, TIM client, eco UI, map tab | Google TIM client + fallback; `/api/eco/emissions`; comparison constants; `EmissionsCard` + `EcoComparison` UI; Map tab with OpenSky live planes + airports | Route arc on map, eco score badge, greener alternatives (train/car), "delay carbon cost" |
 
