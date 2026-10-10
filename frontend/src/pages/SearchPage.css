@@ -1,0 +1,62 @@
+.glass-panel.search-hero {
+  padding: 40px 32px;
+}
+
+.search-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-features li {
+  display: flex;
+}
+
+.glass-panel.search-feature {
+  flex: 1;
+  padding: 20px;
+  border-radius: var(--aero-radius-md);
+}
+
+.search-feature h2 {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.search-feature p {
+  font-size: 0.95rem;
+}
+
+/* Small glossy orb icon */
+.search-feature__orb {
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 45%),
+    radial-gradient(circle at 50% 60%, var(--orb-color), color-mix(in srgb, var(--orb-color), #000 25%));
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--orb-color), transparent 55%);
+}
+
+.search-feature__orb--sky {
+  --orb-color: var(--aero-accent);
+}
+
+.search-feature__orb--leaf {
+  --orb-color: var(--aero-leaf);
+}
+
+.search-feature__orb--amber {
+  --orb-color: var(--aero-amber);
+}
+
+@media (max-width: 760px) {
+  .search-features {
+    grid-template-columns: 1fr;
+  }
+}
