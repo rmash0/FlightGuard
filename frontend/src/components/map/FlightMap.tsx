@@ -121,7 +121,7 @@ function FlightMap({
         ))}
 
         {aircraft.map((plane) => (
-          <PlaneMarker key={plane.icao24} aircraft={plane} />
+          <PlaneMarker key={`${plane.icao24}-${plane.callsign}`} aircraft={plane} />
         ))}
       </MapContainer>
 

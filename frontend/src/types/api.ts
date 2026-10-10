@@ -77,3 +77,9 @@ export type FlightLookupResponse = {
   prediction: DelayPrediction | null;
   emissions: Emissions | null;
 };
+
+export type LiveFlightDetails = {
+  flight_number: string | null;
+  origin: string | null;
+  destination: string | null;
+};

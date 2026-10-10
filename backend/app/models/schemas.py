@@ -79,3 +79,9 @@ class FlightLookupResponse(BaseModel):
     flight: Flight
     prediction: DelayPrediction | None
     emissions: Emissions | None
+
+
+class LiveFlightDetails(BaseModel):
+    flight_number: str | None
+    origin: str | None
+    destination: str | None

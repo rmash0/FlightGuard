@@ -2,7 +2,8 @@
 // Set VITE_USE_MOCKS=true in frontend/.env.local to serve src/mocks/*.json instead of the backend.
 
 import lookupMock from "../mocks/lookup.json";
-import type { FlightLookupResponse } from "../types/api";
+import liveDetailsMock from "../mocks/live-details.json";
+import type { FlightLookupResponse, LiveFlightDetails } from "../types/api";
 import type { LiveAircraft } from "../components/map/PlaneMarker";
 import type { MapAirport } from "../components/map/AirportMarker";
 
@@ -128,6 +129,23 @@ export async function getLiveAircraft(
   });
 
   return getJson<LiveAircraftResponse>(`/api/flights/live?${params}`, signal);
+}
+
+export async function getLiveFlightDetails(
+  icao24: string,
+  callsign: string,
+  signal?: AbortSignal,
+): Promise<LiveFlightDetails> {
+  if (USE_MOCKS) {
+    await mockDelay(signal);
+    return liveDetailsMock as LiveFlightDetails;
+  }
+
+  const params = new URLSearchParams({ callsign });
+  return getJson<LiveFlightDetails>(
+    `/api/flights/live/${encodeURIComponent(icao24)}/details?${params}`,
+    signal,
+  );
 }
 
 export async function getMapAirports(

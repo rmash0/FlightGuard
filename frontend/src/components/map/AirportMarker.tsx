@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { CircleMarker, Popup, Tooltip } from "react-leaflet";
 
 export type MapAirport = {
@@ -17,11 +16,6 @@ function AirportMarker({ airport }: AirportMarkerProps) {
   const isLarge = airport.type === "large_airport";
 
   const radius = isLarge ? 7 : 5;
-
-  const label = useMemo(
-    () => `${airport.iata} - ${airport.name}`,
-    [airport.iata, airport.name],
-  );
 
   return (
     <CircleMarker
