@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router";
+import { NavLink, Outlet, useMatch } from "react-router";
 
 import { APP_NAME } from "../config";
 import GlassPanel from "./aero/GlassPanel";
@@ -7,6 +7,9 @@ import ThemeToggle from "./aero/ThemeToggle";
 import "./Layout.css";
 
 function Layout() {
+  // Results pages are part of the search flow, so keep the Search tab lit there too.
+  const onResultsPage = useMatch("/flight/*") !== null;
+
   return (
     <div className="app-shell">
       <SkyBackground />
@@ -19,7 +22,11 @@ function Layout() {
 
         <div className="app-header__actions">
           <nav className="app-nav" aria-label="Main">
-            <NavLink to="/" end>
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) => (isActive || onResultsPage ? "active" : undefined)}
+            >
               Search
             </NavLink>
             <NavLink to="/map">Map</NavLink>

@@ -38,6 +38,44 @@ function mockDelay(signal?: AbortSignal): Promise<void> {
   });
 }
 
+// Mock-only test flights for previewing every results-page state:
+// ZZ404 / ZZ502 / ZZ503 -> that API error, ZZ1 -> no prediction or emissions,
+// ZZ2 -> a delayed flight with high risk. Any other number returns the sample flight.
+const MOCK_ERROR_FLIGHTS: Record<string, number> = { ZZ404: 404, ZZ502: 502, ZZ503: 503 };
+
+function mockLookup(number: string, date: string): FlightLookupResponse {
+  if (number in MOCK_ERROR_FLIGHTS) {
+    throw new ApiError(`Mock error for ${number}`, MOCK_ERROR_FLIGHTS[number]);
+  }
+
+  const mock = lookupMock as FlightLookupResponse;
+  const response = { ...mock, flight: { ...mock.flight, number, date } };
+
+  if (number === "ZZ1") {
+    return { ...response, prediction: null, emissions: null };
+  }
+
+  if (number === "ZZ2") {
+    return {
+      ...response,
+      flight: {
+        ...response.flight,
+        status: "delayed",
+        estimated_departure: `${date}T14:50:00-04:00`,
+      },
+      prediction: mock.prediction && {
+        ...mock.prediction,
+        risk: "high",
+        probability_delayed: 0.82,
+        estimated_delay_minutes: 48,
+        reported_delay_minutes: 45,
+      },
+    };
+  }
+
+  return response;
+}
+
 export async function lookupFlight(
   number: string,
   date: string,
@@ -45,8 +83,7 @@ export async function lookupFlight(
 ): Promise<FlightLookupResponse> {
   if (USE_MOCKS) {
     await mockDelay(signal);
-    const mock = lookupMock as FlightLookupResponse;
-    return { ...mock, flight: { ...mock.flight, number, date } };
+    return mockLookup(number, date);
   }
 
   const params = new URLSearchParams({ number, date });

@@ -1,0 +1,69 @@
+.delay-gauge {
+  --risk-color: var(--aero-risk-low);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.delay-gauge--medium {
+  --risk-color: var(--aero-risk-medium);
+}
+
+.delay-gauge--high {
+  --risk-color: var(--aero-risk-high);
+}
+
+.delay-gauge__dial {
+  width: min(100%, 240px);
+}
+
+.delay-gauge__track,
+.delay-gauge__value {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 16;
+}
+
+.delay-gauge__track {
+  stroke: var(--aero-glass-strong);
+}
+
+.delay-gauge__value {
+  stroke: var(--risk-color);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--risk-color), transparent 40%));
+  transition: stroke-dasharray 0.8s ease;
+}
+
+.delay-gauge__percent {
+  fill: var(--aero-heading);
+  font-size: 34px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.delay-gauge__caption {
+  fill: var(--aero-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.delay-gauge__estimate {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.delay-gauge__reported {
+  margin: 0;
+  color: var(--aero-amber);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .delay-gauge__value {
+    transition: none;
+  }
+}

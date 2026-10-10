@@ -1,0 +1,49 @@
+.reason-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.reason-list__item {
+  --impact-color: var(--aero-risk-low);
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--aero-glass-border);
+  border-radius: var(--aero-radius-md);
+  background-color: var(--aero-glass-strong);
+}
+
+.reason-list__item--medium {
+  --impact-color: var(--aero-risk-medium);
+}
+
+.reason-list__item--high {
+  --impact-color: var(--aero-risk-high);
+}
+
+.reason-list__dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.9), var(--impact-color) 60%);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--impact-color), transparent 40%);
+}
+
+.reason-list__detail {
+  flex: 1;
+}
+
+.reason-list__impact {
+  color: var(--aero-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}

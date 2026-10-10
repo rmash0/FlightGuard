@@ -44,6 +44,19 @@
   margin: 0 0 4px;
 }
 
+.flight-search--compact {
+  max-width: none;
+  margin: 0;
+}
+
+.flight-search--compact .aero-input {
+  min-height: 42px;
+}
+
+.flight-search--compact .flight-search__submit {
+  min-height: 42px;
+}
+
 @media (max-width: 640px) {
   .flight-search__fields {
     grid-template-columns: 1fr;

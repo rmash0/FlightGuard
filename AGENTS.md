@@ -159,17 +159,36 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `SearchPage` is done: a hero panel with `FlightSearchForm` and a compact row of feature pills (`<FeatureList variant="compact" />`). It's kept light so the skyline stays visible.
   - The form validates the flight number and date with inline errors and navigates to `/flight/:number/:date`.
   - Parsing lives in `utils/flightSearch.ts`:
-    - `normalizeFlightNumber` accepts `dl 1234`, `DL-1234`, `B6 623` and `DAL1234`, and returns uppercase with no spaces, or `null`.
+    - `normalizeFlightNumber` accepts `dl 1234`, `DL-1234` and `B6 623`, and returns uppercase with no spaces, or `null`.
+    - It allows the same flight numbers as the backend's check in `routes_flights.py`: a 2-character IATA code plus 1–4 digits. No ICAO codes like `DAL1234` and no suffix letters. Change both together.
     - The search date range is 7 days back to 30 days ahead, set by `SEARCH_PAST_DAYS` / `SEARCH_FUTURE_DAYS`.
-  - `ResultsPage` calls `lookupFlight` and renders bare text with loading, error and `null` states.
+  - `ResultsPage` is done:
+    - A compact search bar at the top, prefilled from the URL.
+    - `FlightSummary`: route card with airport-local times, duration, a status badge, and the scheduled time struck through when the airline posts a new one.
+    - The "Delay forecast" panel: `DelayGauge` (half-circle dial, risk badge, estimated minutes, reported-delay note) plus `ReasonList` (high impact first).
+    - Role D's `EmissionsCard`, which brings its own panel, next to the delay forecast.
+    - A loading orb, and a friendly message for each API error (404, 422, 502, 503, network). "Try again" only appears for 502 and network errors.
+    - Empty-state copy when `prediction` or `emissions` is `null`.
+    - Messy URLs (`/flight/dl-1234/...`) redirect to the clean form. Invalid flight numbers or dates in the URL show a message without calling the API.
+  - `hooks/useFlightLookup.ts` wraps `lookupFlight` with loading/error/ready state and `retry()`. `utils/format.ts` has the time, date and duration formatters.
+  - The Search nav tab stays highlighted on `/flight/*`.
   - `AboutPage` has an intro, full feature cards (`<FeatureList variant="cards" />`) and data credits. Model accuracy and methodology are still to come.
   - `MapPage` is a placeholder. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
-  - `api/client.ts` has `lookupFlight(number, date, signal?)` and `ApiError`, plus the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - `api/client.ts` has `lookupFlight(number, date, signal?)` and `ApiError` (with `.status`), plus the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - **Mock test flights** (mocks only):
+    - `ZZ404`, `ZZ502`, `ZZ503` return those errors.
+    - `ZZ1` has `null` prediction and emissions.
+    - `ZZ2` is a delayed, high-risk flight.
+    - Any other number returns the sample flight.
+  - Mocks vs real backend:
+    - With mocks off and the backend in `DEMO_MODE=true`, only `DL1234` on `2026-10-11` exists. Everything else returns 404.
+    - `.env.local` overrides `.env.example`, so to test against the real backend, set `VITE_USE_MOCKS=false` there (or prefix the command) and restart Vite.
   - `types/api.ts` mirrors the §8 contract, and `mocks/lookup.json` is a sample response.
 - **Vite dev proxy:** `/api` → `http://127.0.0.1:8000`, so the frontend uses relative URLs only and CORS isn't involved in dev.
-- `components/eco/EmissionsCard.tsx` is a placeholder version for Role D (props `{ emissions: Emissions | null }`).
+- `components/eco/EmissionsCard.tsx` (Role D) is built: cabin-class picker, kg CO2e per passenger, estimate tier, `EcoComparison`, and the source note. Props: `{ emissions: Emissions | null }`.
+  - It renders **its own** `GlassPanel` and "Carbon Footprint" heading, including the `null` state. `ResultsPage` places it straight into the results grid without wrapping it.
 - `config.ts` holds `APP_NAME`. `<title>` is "FlightGuard".
 - **Aero theme:** done. Tokens for light and dark are in `index.css`, the shared components are in `components/aero/`, and the glass nav bar, sky background (bubbles, city skyline with control tower and wind turbines, stars and a full moon at night), theme toggle and Aero favicon are in place. Page content is centered. See §7 "Using the theme".
 - `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` (Role D) is still unstyled.
@@ -272,7 +291,8 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
   - `SkyBackground` is the fixed decorative scene behind everything: stars, the full moon (night only), `Skyline` (SVG city, control tower and wind turbines along the bottom) and rising bubbles.
   - Its colors come from the `--aero-skyline-*`, `--aero-moon-opacity`, `--aero-beacon-opacity`, `--aero-stars-opacity` and `--aero-bubble-opacity` tokens.
 - `.app-main` centers text (`text-align: center`). Set `text-align: left` on anything that reads better left-aligned, such as lists, tables and long paragraphs.
-- Utility class: `.text-muted`.
+- `<AeroBadge tone="sky|aqua|leaf|amber|coral|muted">`: small glossy pill for statuses, delay risk, an eco score and so on. Amber uses dark text for contrast.
+- Utility classes: `.text-muted`, and `.visually-hidden` (hidden on screen, still read by screen readers).
 
 **Gotchas**
 - When writing `backdrop-filter` with a `-webkit-` prefix, put the **prefixed line first**. The build minifier keeps only the last of the pair, and Chrome/Edge ignore the prefixed version. Dev mode won't show the problem.
