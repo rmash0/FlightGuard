@@ -1,34 +1,23 @@
-import { useEffect, useState } from "react";
+import { Route, Routes } from "react-router";
 
-type HealthResponse = {
-  status: string;
-};
+import Layout from "./components/Layout";
+import AboutPage from "./pages/AboutPage";
+import MapPage from "./pages/MapPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import ResultsPage from "./pages/ResultsPage";
+import SearchPage from "./pages/SearchPage";
 
 function App() {
-  const [backendStatus, setBackendStatus] = useState("Checking backend...");
-
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/health")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Backend request failed");
-        }
-
-        return response.json() as Promise<HealthResponse>;
-      })
-      .then((data) => {
-        setBackendStatus(`Backend status: ${data.status}`);
-      })
-      .catch(() => {
-        setBackendStatus("Could not connect to backend");
-      });
-  }, []);
-
   return (
-    <main>
-      <h1>FlightGuard</h1>
-      <p>{backendStatus}</p>
-    </main>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<SearchPage />} />
+        <Route path="flight/:number/:date" element={<ResultsPage />} />
+        <Route path="map" element={<MapPage />} />
+        <Route path="about" element={<AboutPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   );
 }
 

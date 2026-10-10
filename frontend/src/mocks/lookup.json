@@ -1,0 +1,35 @@
+{
+  "flight": {
+    "number": "DL1234",
+    "airline": { "iata": "DL", "name": "Delta Air Lines" },
+    "date": "2026-10-11",
+    "origin": { "iata": "RDU", "name": "Raleigh-Durham Intl", "lat": 35.88, "lon": -78.79 },
+    "destination": { "iata": "ATL", "name": "Hartsfield-Jackson Atlanta Intl", "lat": 33.64, "lon": -84.43 },
+    "scheduled_departure": "2026-10-11T14:05:00-04:00",
+    "scheduled_arrival": "2026-10-11T15:40:00-04:00",
+    "estimated_departure": null,
+    "actual_departure": null,
+    "status": "scheduled",
+    "aircraft_type": "B739",
+    "icao24": null
+  },
+  "prediction": {
+    "risk": "medium",
+    "probability_delayed": 0.38,
+    "estimated_delay_minutes": 17,
+    "reported_delay_minutes": null,
+    "reasons": [
+      { "factor": "weather_destination", "detail": "Thunderstorms forecast at ATL around arrival", "impact": "high" },
+      { "factor": "time_of_day", "detail": "Afternoon departures run later on average", "impact": "low" }
+    ],
+    "model": "heuristic-v1"
+  },
+  "emissions": {
+    "co2e_kg_per_passenger": { "economy": 92.1, "premium_economy": 138.2, "business": 184.2, "first": 276.3 },
+    "estimate_tier": "flight",
+    "source": "google_tim",
+    "comparisons": [
+      { "label": "km in an average gas car", "value": 230 }
+    ]
+  }
+}
