@@ -30,8 +30,8 @@ Frutiger Aero (the Windows Vista/7, early-2000s "nature + technology" look) fits
 | Home screen | **Flight search** (delay prediction is the main goal). Map lives in its own tab. |
 | Routing | **React Router** (`react-router` v8, declarative mode with `BrowserRouter`). Routes in §8. |
 | Roles | Assigned by the team (§9). |
-| Scope | **US airlines only.** This lets us use free FAA and BTS data. |
-| Flight data API | **AeroDataBox** via RapidAPI (see §6.1). **Budget approved: about $10** (Pro tier). Not signed up yet. |
+| Scope | **US passenger airlines only, with at least one US airport.** International routes qualify when they start or end in the US. FAA and BTS signals may cover only the US portion of a route. |
+| Flight data API | **AeroDataBox** via RapidAPI (see §6.1). Pro tier is subscribed; the key is kept in the local `backend/.env`. |
 | Delay prediction | Heuristic first, then **train a model on BTS data if time permits**. |
 | CO2 source | **Google Travel Impact Model (TIM) API.** |
 | OpenSky account | None yet. Map uses anonymous access with caching. |
@@ -148,8 +148,8 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `main.py`: FastAPI app "FlightGuard API". CORS allows `http://localhost:5173` only.
 - `GET /` and `GET /api/health` → `{"status": "ok"}`.
 - `api/routes_flights.py`: `GET /api/flights/demo` returns one hard-coded demo flight.
-- `GET /api/flights/lookup` now normalizes a US flight from AeroDataBox to the §8 schema, caches successful lookups for 10 minutes, and returns clear 404/502/503 errors. Live mode needs `AERODATABOX_API_KEY`.
-- `models/schemas.py` mirrors the TypeScript lookup contract. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Prediction and emissions are `null` in live mode until Roles C and D add their service hooks below.
+- `GET /api/flights/lookup` accepts supported US passenger airline codes only and requires the origin or destination to be in the US. It caches successful lookups for 10 minutes and returns clear 404/422/502/503 errors. Live mode needs `AERODATABOX_API_KEY`.
+- `models/schemas.py` mirrors the TypeScript lookup contract. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Live lookup calls Role D's emissions service; prediction remains `null` until Role C adds its service hook below.
 - `services/cache.py` provides an in-process async TTL cache with one in-flight fetch per key. Each backend process has its own cache.
 - `clients/opensky_client.py`: `get_aircraft_in_area(lamin, lamax, lomin, lomax)` calls OpenSky anonymously. Not wired to a route.
 
@@ -316,7 +316,7 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 
 `/api/flights/lookup` calls the flight client and then the prediction and emissions services. The frontend makes **one call** for the results page.
 
-**Backend service hooks:** Role C exposes `async predict_delay(flight: Flight) -> DelayPrediction | None` in `services/delay_predictor.py`. Role D exposes `async get_emissions(flight: Flight) -> Emissions | None` in `services/emissions.py`. The lookup route calls either when its module exists; a failure in one service yields `null` for that field.
+**Backend service hooks:** Role C exposes `async predict_delay(flight: Flight) -> DelayPrediction | None` in `services/delay_predictor.py`. Role D exposes `async get_emissions_for_flight(flight: Flight) -> Emissions | None` in `services/emissions.py`. The lookup route calls either when its module exists; a failure in one service yields `null` for that field.
 
 ### `FlightLookupResponse` (shape to match in Pydantic `models/` and TS `types/`)
 ```json

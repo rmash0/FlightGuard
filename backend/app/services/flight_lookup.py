@@ -22,6 +22,19 @@ LOOKUP_TTL_SECONDS = 600
 _lookup_cache: TTLCache[FlightLookupResponse] = TTLCache()
 _provider_cache: TTLCache[list[dict]] = TTLCache()
 
+# US passenger carriers and their regional affiliates. Codes are checked against
+# the DOT/BTS carrier lists; add a carrier here when the supported scope expands.
+# https://www.transtats.bts.gov/CarrierList.aspx
+# https://www.bts.gov/explore-topics-and-geography/modes/aviation/directive-no-345-air-carrier-groups
+US_AIRLINE_IATA = frozenset({
+    "9E", "AA", "AS", "B6", "C5", "DL", "F9", "G4", "G7", "HA", "MQ", "MX",
+    "NK", "OH", "OO", "PT", "QX", "SY", "UA", "WN", "XP", "YV", "YX", "ZW",
+})
+
+
+class FlightOutsideScope(ValueError):
+    pass
+
 _STATUSES = {
     "expected": "scheduled",
     "checkin": "scheduled",
@@ -41,8 +54,6 @@ _STATUSES = {
 def _airport(movement: dict[str, Any]) -> Airport:
     provider_airport = movement["airport"]
     location = provider_airport["location"]
-    if provider_airport.get("countryCode") != "US":
-        raise ValueError("Flight is outside the US scope")
     return Airport(
         iata=provider_airport["iata"],
         name=provider_airport["name"],
@@ -75,8 +86,18 @@ def _time(value: dict[str, str] | None, zone: str | None) -> datetime | None:
 
 
 def normalize_flight(raw: dict[str, Any], number: str, departure_date: date) -> Flight:
+    if number[:2] not in US_AIRLINE_IATA:
+        raise FlightOutsideScope("Only US airline flights are supported")
     departure = raw["departure"]
     arrival = raw["arrival"]
+    airline = raw.get("airline") or {}
+    provider_code = airline.get("iata")
+    if provider_code and provider_code.upper() not in US_AIRLINE_IATA:
+        raise FlightOutsideScope("Only US airline flights are supported")
+    departure_country = (departure["airport"].get("countryCode") or "").upper()
+    arrival_country = (arrival["airport"].get("countryCode") or "").upper()
+    if departure_country != "US" and arrival_country != "US":
+        raise FlightOutsideScope("Flight must depart from or arrive at a US airport")
     origin = _airport(departure)
     destination = _airport(arrival)
     scheduled_departure = _time(departure.get("scheduledTime"), departure["airport"].get("timeZone"))
@@ -86,7 +107,6 @@ def normalize_flight(raw: dict[str, Any], number: str, departure_date: date) -> 
     if scheduled_departure.date() != departure_date:
         raise ValueError("Flight departs on a different date")
 
-    airline = raw.get("airline") or {}
     revised_departure = _time(departure.get("revisedTime"), departure["airport"].get("timeZone"))
     provider_status = str(raw.get("status", "unknown")).lower()
     departed = provider_status in {"departed", "enroute", "approaching", "arrived"}
@@ -142,14 +162,19 @@ async def _live_lookup(number: str, departure_date: date) -> FlightLookupRespons
         raise HTTPException(status_code=404, detail="Flight not found")
 
     flight = None
+    scope_error = None
     for candidate in candidates:
         try:
             flight = normalize_flight(candidate, number, departure_date)
             break
+        except FlightOutsideScope as exc:
+            scope_error = exc
         except (AttributeError, KeyError, TypeError, ValueError):
             continue
     if flight is None:
-        raise HTTPException(status_code=502, detail="Provider returned no complete US flight for that date")
+        if scope_error is not None:
+            raise HTTPException(status_code=422, detail=str(scope_error))
+        raise HTTPException(status_code=502, detail="Provider returned no complete flight for that date")
 
     prediction = await _optional_service(
         "app.services.delay_predictor", "predict_delay", flight, DelayPrediction
@@ -160,6 +185,8 @@ async def _live_lookup(number: str, departure_date: date) -> FlightLookupRespons
 
 async def lookup_flight(number: str, departure_date: date) -> FlightLookupResponse:
     number = "".join(number.upper().split())
+    if number[:2] not in US_AIRLINE_IATA:
+        raise HTTPException(status_code=422, detail="Only US airline flights are supported")
     if os.getenv("DEMO_MODE", "false").lower() in {"true", "1", "yes"}:
         fixture = get_demo_lookup(number, departure_date)
         if fixture is None:
