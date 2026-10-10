@@ -28,7 +28,7 @@ Frutiger Aero (the Windows Vista/7, early-2000s "nature + technology" look) fits
 |---|---|
 | Name | TBD. Use "FlightGuard" in code until renamed. |
 | Home screen | **Flight search** (delay prediction is the main goal). Map lives in its own tab. |
-| Routing | **React Router** (`react-router` v7, declarative mode with `BrowserRouter`). Routes in §8. |
+| Routing | **React Router** (`react-router` v8, declarative mode with `BrowserRouter`). Routes in §8. |
 | Roles | Assigned by the team (§9). |
 | Scope | **US airlines only.** This lets us use free FAA and BTS data. |
 | Flight data API | **AeroDataBox** via RapidAPI (see §6.1). **Budget approved: about $10** (Pro tier). Not signed up yet. |
@@ -69,6 +69,39 @@ Frutiger Aero (the Windows Vista/7, early-2000s "nature + technology" look) fits
 - Put secrets in `backend/.env` (gitignored) and document new variables in `backend/.env.example`. **The frontend never holds API keys.** All third-party calls go through the backend.
 - **Cache every third-party response** on the backend. Our API quotas are tiny.
 - When you finish something, update §5 (Current State).
+
+### Working in parallel (compatibility rules)
+Everyone works solo on their own branch. These rules keep the pieces fitting together at the integration checkpoint.
+
+1. **The API contract (§8) is the agreement between frontend and backend.**
+   - `frontend/src/types/api.ts` (TypeScript) and `backend/app/models/schemas.py` (Pydantic) must match **field for field**: same names (snake_case), same nullability, same enum values.
+   - Changing the contract means updating §8, `types/api.ts`, `schemas.py` and `mocks/lookup.json` **in the same PR**, and telling the team. Role B owns the contract and should review contract PRs.
+   - Add fields freely. Don't rename or remove fields without telling the team.
+2. **One API client, with a mock switch.**
+   - Frontend code never calls `fetch` directly. Everything goes through `frontend/src/api/client.ts`.
+   - With `VITE_USE_MOCKS=true` in `frontend/.env.local`, the client returns `frontend/src/mocks/*.json` instead of calling the backend. Going live is a single setting.
+   - Use relative `/api/...` URLs only. The Vite dev proxy forwards them to `http://127.0.0.1:8000`. Never hard-code hosts or ports.
+3. **Stay in your own files.** Ownership:
+   - **A:** `App.tsx`, `main.tsx`, `index.css`, `components/Layout.tsx`, `components/aero/*`, `components/search/*`, `components/results/*`, `pages/SearchPage`, `pages/ResultsPage`, `pages/AboutPage`, `pages/NotFoundPage`, `api/client.ts`, `frontend/package.json`.
+   - **B:** `backend/app/main.py`, `models/schemas.py`, `clients/aerodatabox_client.py`, `services/flight_lookup.py`, `services/cache.py`, `services/demo_fixtures.py`, `api/routes_flights.py`, `backend/pyproject.toml`, `backend/.env.example`.
+   - **C:** `services/delay_predictor.py`, `clients/open_meteo_client.py`, `clients/faa_status_client.py`, `api/routes_predict.py`, `api/routes_airports.py`, `backend/ml/*`.
+   - **D:** `services/emissions.py`, `clients/google_tim_client.py`, `clients/opensky_client.py`, `api/routes_eco.py`, `data/eco_constants.py`, `data/airports.json`, `components/eco/*`, `components/map/*`, `pages/MapPage`.
+   - **Shared, small edits OK (keep them minimal):** `AGENTS.md`, `types/api.ts`, `mocks/*`.
+   - If you need a change in someone else's file, ask them or keep the PR tiny and tag them.
+4. **Use placeholder versions of cross-owner components.** A creates placeholder versions of `EmissionsCard` (props: `{ emissions: Emissions | null }`) and `MapPage`, so pages can include them from day one. D replaces the insides **without changing the props**. Backend routes do the same: register the route early with a placeholder response that matches the schema, then fill it in.
+5. **Shared UI comes from the Aero components.** Use `GlassPanel`, `AeroButton` and the CSS custom properties in `index.css` (`var(--aero-*)`). Don't hard-code colors, and don't create your own glass or button styles. If you need a variant, add a prop or ask A.
+6. **Plan for failure.** `prediction` and `emissions` can be `null`, and APIs can fail or hit rate limits. Every component handles loading, error and `null` states. Backend services catch third-party errors and return `null` (or fixtures in `DEMO_MODE`) rather than a 500 for the whole lookup.
+7. **Dependencies go through the owner.**
+   - Only A adds frontend packages (`npm install ...`). Only B edits `pyproject.toml` (`uv add ...`). Exception: C may `uv add` the agreed ML packages.
+   - Lockfile conflicts: take `main`'s version of `package-lock.json` / `uv.lock`, then rerun `npm install` / `uv sync` and commit the result. Never hand-edit lockfiles.
+   - Don't commit lockfile churn that has no dependency change behind it, such as npm flipping `"peer": true` flags.
+8. **Keep in sync.**
+   - Pull `main` into your branch (`git pull origin main`) at least before opening each PR.
+   - Aim for PRs that are open less than about 2 hours. A small PR merged early beats a big one merged late.
+9. **Check before you PR.**
+   - Frontend: `npm run lint` **and** `npm run build`. The build runs the TypeScript checks, which catch contract mismatches.
+   - Backend: the app starts (`uv run fastapi dev app/main.py`), and your endpoints return the documented shape at `/docs`.
+10. **AI assistants:** begin sessions with "I'm Role X. Read AGENTS.md. Only edit files I own." If a task would cross ownership lines, stop and say so instead of editing.
 
 ---
 
@@ -294,7 +327,7 @@ frontend/src/
 | `/about` | `AboutPage` | How prediction and CO2 work, model accuracy, data credits |
 | `*` | `NotFoundPage` | Friendly Aero-styled 404 |
 
-- Install with `npm install react-router`. In v7, `react-router-dom` is merged into `react-router`.
+- Installed as `react-router` v8 (requires Node ≥ 22.22). There is no `react-router-dom` package anymore. Import everything from `react-router`. Official docs ship locally in `node_modules/react-router/docs/`.
 - Put routes in `src/App.tsx` inside a shared `Layout` component: glass nav bar (Search · Map · About) + `ThemeToggle` + `<Outlet />`.
 - Use `<NavLink>` for nav tabs so the active tab gets a glossy "selected" style.
 - The search form navigates with `useNavigate()` to `/flight/:number/:date`. Normalize the number to uppercase with no spaces.
@@ -313,7 +346,7 @@ The team has assigned these roles. Fill in the Owner column so AI agents know wh
 | **C — Delay Prediction and ML** | _TBD_ | `services/delay_predictor.py`, weather/FAA clients, `backend/ml/` | Open-Meteo + FAA NAS clients; heuristic v1 with reasons; `/api/predict`; `/api/airports/{iata}` | **BTS model v2** (`ml/train.py`, joblib model, blended prediction), accuracy stat for the About page, historical delay chart data |
 | **D — Eco and Map** | _TBD_ | `services/emissions.py`, TIM client, eco UI, map tab | Google TIM client + fallback; `/api/eco/emissions`; comparison constants; `EmissionsCard` + `EcoComparison` UI; Map tab with OpenSky live planes + airports | Route arc on map, eco score badge, greener alternatives (train/car), "delay carbon cost" |
 
-Pairing: A ↔ D share the eco UI components and theme. B ↔ C agree on how lookup calls the predictor. B owns the contract; anyone changing it pings B.
+Pairing: A ↔ D share the eco UI components and theme. B ↔ C agree on how lookup calls the predictor. B owns the contract; anyone changing it pings B. File ownership and the rules for working in parallel are in §3 ("Working in parallel").
 
 ### Timeline (22 h, relative to start)
 | Hours | Goal |
