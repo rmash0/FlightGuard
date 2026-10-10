@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 
 import { lookupFlight } from "../api/client";
+import GlassPanel from "../components/aero/GlassPanel";
 import EmissionsCard from "../components/eco/EmissionsCard";
 import type { FlightLookupResponse } from "../types/api";
 
@@ -32,24 +33,28 @@ function ResultsPage() {
   }, [key, number, date]);
 
   if (!result || result.key !== key) {
-    return <p>Looking up {number}...</p>;
+    return (
+      <GlassPanel as="section">
+        <p>Looking up {number}...</p>
+      </GlassPanel>
+    );
   }
 
   if (result.status === "error") {
     return (
-      <section>
+      <GlassPanel as="section">
         <h1>We couldn't load {number}</h1>
         <p>
           Check the flight number and date, or <Link to="/">search again</Link>.
         </p>
-      </section>
+      </GlassPanel>
     );
   }
 
   const { flight, prediction, emissions } = result.data;
 
   return (
-    <section>
+    <GlassPanel as="section">
       <h1>{flight.number}</h1>
       <p>
         {flight.origin.iata} → {flight.destination.iata} · {flight.date} ·{" "}
@@ -62,7 +67,7 @@ function ResultsPage() {
           : "unavailable"}
       </p>
       <EmissionsCard emissions={emissions} />
-    </section>
+    </GlassPanel>
   );
 }
 

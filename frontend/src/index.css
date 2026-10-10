@@ -1,13 +1,131 @@
-/* Minimal neutral base. Aero design tokens and components arrive in Role A, PR 2. */
+/*
+ * Frutiger Aero design tokens. Use var(--aero-*) everywhere; never hard-code colors.
+ * Theme is set on <html data-theme="light|dark"> by the script in index.html and ThemeToggle.
+ */
 
 :root {
-  --font-sans: 'Segoe UI', Nunito, 'Open Sans', system-ui, sans-serif;
+  /* Type */
+  --aero-font: 'Segoe UI', Nunito, 'Open Sans', system-ui, sans-serif;
 
-  font-family: var(--font-sans);
-  line-height: 1.5;
-  color-scheme: light dark;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Shape */
+  --aero-radius-sm: 10px;
+  --aero-radius-md: 18px;
+  --aero-radius-lg: 28px;
+  --aero-radius-pill: 999px;
+  --aero-blur: 18px;
+
+  /* Text */
+  --aero-text: #0b3a5b;
+  --aero-text-muted: #3d6782;
+  --aero-heading: #06304f;
+  --aero-heading-glow: 0 1px 0 rgba(255, 255, 255, 0.7);
+  --aero-link: #0a6fb8;
+
+  /* Palette */
+  --aero-accent: #1aa3e8;
+  --aero-accent-strong: #0a7cc2;
+  --aero-leaf: #4fb62f;
+  --aero-amber: #f2a221;
+  --aero-coral: #ff6f61;
+
+  /* Delay risk: aqua -> amber -> coral (never harsh red) */
+  --aero-risk-low: #17b3c9;
+  --aero-risk-medium: var(--aero-amber);
+  --aero-risk-high: var(--aero-coral);
+
+  /* Eco: green leaf for low CO2, amber for high */
+  --aero-eco-low: var(--aero-leaf);
+  --aero-eco-high: var(--aero-amber);
+
+  /* Glass */
+  --aero-glass-bg: rgba(255, 255, 255, 0.42);
+  --aero-glass-strong: rgba(255, 255, 255, 0.62);
+  --aero-glass-border: rgba(255, 255, 255, 0.8);
+  --aero-glass-inner: rgba(255, 255, 255, 0.9);
+  --aero-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+  --aero-shadow: 0 10px 34px rgba(8, 72, 128, 0.22);
+  --aero-focus: 0 0 0 3px rgba(26, 163, 232, 0.55);
+
+  /* Gel buttons */
+  --aero-gel-primary-top: #74d4ff;
+  --aero-gel-primary-bottom: #0a84d6;
+  --aero-gel-primary-border: rgba(0, 86, 156, 0.55);
+  --aero-gel-primary-glow: rgba(26, 163, 232, 0.45);
+  --aero-gel-eco-top: #a3ec72;
+  --aero-gel-eco-bottom: #2d9a28;
+  --aero-gel-eco-border: rgba(28, 108, 28, 0.55);
+  --aero-gel-eco-glow: rgba(79, 182, 47, 0.45);
+
+  /* Background: sunny sky fading to fresh grass */
+  --aero-bg:
+    radial-gradient(ellipse at 12% -8%, rgba(255, 255, 255, 0.9), transparent 42%),
+    radial-gradient(ellipse at 90% 105%, rgba(160, 230, 120, 0.55), transparent 50%),
+    linear-gradient(180deg, #2a8ad8 0%, #74c3f2 34%, #d6f0ff 70%, #c4ecab 100%);
+  --aero-bubble-opacity: 0.85;
+  --aero-stars-opacity: 0;
+  --aero-moon-opacity: 0;
+
+  /* Skyline: glassy blue-white towers by day */
+  --aero-skyline-back: rgba(255, 255, 255, 0.42);
+  --aero-skyline-front: rgba(78, 160, 220, 0.5);
+  --aero-skyline-window: #fff;
+  --aero-skyline-window-opacity: 0.45;
+  --aero-skyline-lit-opacity: 0.6;
+  --aero-skyline-detail: rgba(255, 255, 255, 0.95);
+  --aero-skyline-hill: rgba(112, 196, 82, 0.75);
+  --aero-beacon-opacity: 0;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  /* Night sky with aurora */
+  --aero-text: #e3f2ff;
+  --aero-text-muted: #9dbad6;
+  --aero-heading: #f2f9ff;
+  --aero-heading-glow: 0 0 18px rgba(76, 201, 255, 0.45);
+  --aero-link: #7fd6ff;
+
+  --aero-accent: #4cc9ff;
+  --aero-accent-strong: #22a8ee;
+
+  --aero-glass-bg: rgba(16, 30, 72, 0.45);
+  --aero-glass-strong: rgba(40, 64, 128, 0.6);
+  --aero-glass-border: rgba(140, 205, 255, 0.28);
+  --aero-glass-inner: rgba(170, 220, 255, 0.25);
+  --aero-gloss: linear-gradient(180deg, rgba(160, 215, 255, 0.16), rgba(160, 215, 255, 0));
+  --aero-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+  --aero-focus: 0 0 0 3px rgba(76, 201, 255, 0.6);
+
+  --aero-gel-primary-top: #5fd0ff;
+  --aero-gel-primary-bottom: #0a5fae;
+  --aero-gel-primary-border: rgba(110, 200, 255, 0.45);
+  --aero-gel-primary-glow: rgba(76, 201, 255, 0.4);
+  --aero-gel-eco-top: #7fe0a0;
+  --aero-gel-eco-bottom: #1d7f52;
+  --aero-gel-eco-border: rgba(110, 230, 170, 0.4);
+  --aero-gel-eco-glow: rgba(46, 230, 160, 0.35);
+
+  --aero-bg:
+    radial-gradient(ellipse at 18% 8%, rgba(46, 230, 180, 0.3), transparent 48%),
+    radial-gradient(ellipse at 82% 0%, rgba(96, 120, 255, 0.32), transparent 52%),
+    radial-gradient(ellipse at 50% 32%, rgba(40, 200, 220, 0.14), transparent 60%),
+    linear-gradient(180deg, #030817 0%, #0b1440 55%, #17154d 100%);
+  --aero-bubble-opacity: 0.35;
+  --aero-stars-opacity: 1;
+  --aero-moon-opacity: 1;
+
+  /* Skyline: dark silhouettes with warm lit windows */
+  --aero-skyline-back: rgba(38, 50, 118, 0.6);
+  --aero-skyline-front: #0b1236;
+  --aero-skyline-window: #ffd77a;
+  --aero-skyline-window-opacity: 0.06;
+  --aero-skyline-lit-opacity: 0.9;
+  --aero-skyline-detail: #8fa6cf;
+  --aero-skyline-hill: #081a2e;
+  --aero-beacon-opacity: 1;
+
+  color-scheme: dark;
 }
 
 *,
@@ -16,45 +134,58 @@
   box-sizing: border-box;
 }
 
+html {
+  font-family: var(--aero-font);
+  line-height: 1.5;
+  color: var(--aero-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   margin: 0;
   min-height: 100svh;
+  background: var(--aero-bg);
+  background-attachment: fixed;
 }
 
-.app-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 24px;
-}
-
-.app-brand {
-  font-weight: 700;
-  font-size: 1.25rem;
-  text-decoration: none;
-  color: inherit;
-}
-
-.app-nav {
-  display: flex;
-  gap: 16px;
-}
-
-.app-nav a {
-  color: inherit;
-  text-decoration: none;
-  opacity: 0.7;
-}
-
-.app-nav a.active {
-  opacity: 1;
+h1,
+h2,
+h3 {
+  margin: 0 0 12px;
+  color: var(--aero-heading);
+  text-shadow: var(--aero-heading-glow);
   font-weight: 600;
+  line-height: 1.2;
 }
 
-.app-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px;
+h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  letter-spacing: -0.5px;
+}
+
+h2 {
+  font-size: 1.4rem;
+}
+
+p {
+  margin: 0 0 12px;
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+a {
+  color: var(--aero-link);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--aero-focus);
+  border-radius: var(--aero-radius-sm);
+}
+
+.text-muted {
+  color: var(--aero-text-muted);
 }

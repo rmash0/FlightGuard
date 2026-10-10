@@ -163,7 +163,8 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - **Vite dev proxy:** `/api` → `http://127.0.0.1:8000`, so the frontend uses relative URLs only and CORS isn't involved in dev.
 - `components/eco/EmissionsCard.tsx` is a placeholder version for Role D (props `{ emissions: Emissions | null }`).
 - `config.ts` holds `APP_NAME`. `<title>` is "FlightGuard".
-- No Aero theme yet. `index.css` is a minimal neutral base, and the Vite template files have been removed.
+- **Aero theme:** done. Tokens for light and dark are in `index.css`, the shared components are in `components/aero/`, and the glass nav bar, sky background (bubbles, city skyline with control tower and wind turbines, stars and a full moon at night), theme toggle and Aero favicon are in place. Page content is centered. See §7 "Using the theme".
+- `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` (Role D) is still unstyled.
 
 **Known gotchas**
 - OpenSky anonymous access is heavily rate-limited. Cache about 15 s and keep bounding boxes small.
@@ -233,10 +234,39 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 | Icons | Glossy, rounded, slightly 3D. Eco stats use leaf/droplet icons. |
 | Motion | Floating bubbles, soft fades, shine sweep on hover. Respect `prefers-reduced-motion`. |
 
-**Implementation:**
-- Design tokens are CSS custom properties in `frontend/src/index.css`: `:root` for light, `[data-theme="dark"]` for dark, defaulting to `prefers-color-scheme`.
-- Shared components: `GlassPanel`, `AeroButton`, `BubbleBackground`, `ThemeToggle`. Plain CSS, no UI library.
-- **Eco tie-in:** low-CO2 flights get a green leaf glow, high-CO2 an amber tint. Delay risk uses aqua (low) → amber → coral (high), never harsh red.
+**Eco tie-in:** low-CO2 flights get a green leaf glow, high-CO2 an amber tint. Delay risk uses aqua (low) → amber → coral (high), never harsh red.
+
+### Using the theme (built, in `frontend/src`)
+**How theming works**
+- The theme lives on `<html data-theme="light|dark">`. An inline script in `index.html` sets it before first paint, from `localStorage["theme"]` or the OS setting. `ThemeToggle` switches it and saves the choice.
+- Styling for dark mode means **overriding tokens** under `:root[data-theme='dark']` (or `:root[data-theme='dark'] .your-class`). Never use `@media (prefers-color-scheme)` in components.
+
+**Tokens** (`index.css`, always `var(--aero-*)`)
+
+| Group | Tokens |
+|---|---|
+| Text | `--aero-text`, `--aero-text-muted`, `--aero-heading`, `--aero-heading-glow`, `--aero-link` |
+| Palette | `--aero-accent`, `--aero-accent-strong`, `--aero-leaf`, `--aero-amber`, `--aero-coral` |
+| Delay risk | `--aero-risk-low` / `-medium` / `-high` |
+| Eco | `--aero-eco-low` (green), `--aero-eco-high` (amber) |
+| Glass | `--aero-glass-bg`, `--aero-glass-strong`, `--aero-glass-border`, `--aero-glass-inner`, `--aero-gloss`, `--aero-shadow`, `--aero-blur` |
+| Shape | `--aero-radius-sm` / `-md` / `-lg` / `-pill` |
+| Focus | `--aero-focus` (box-shadow ring) |
+| Gel | `--aero-gel-primary-*`, `--aero-gel-eco-*` (`-top`, `-bottom`, `-border`, `-glow`) |
+
+**Components** (`components/aero/`)
+- `<GlassPanel as="section" className="...">`: frosted card, the base for every panel. `as` can be `div` (default), `section`, `article`, `aside`, `header` or `footer`. Accepts all div props. Adjacent panels get a 20px gap automatically.
+- `<AeroButton variant="primary|eco|glass" size="md|lg">`: glossy gel button with all normal button props. `type` defaults to `"button"`. Use `eco` (green) for eco actions.
+- `aeroButtonClass(variant?, size?, className?)` from `components/aero/classes.ts`: use this to style a **link** as an Aero button, e.g. `<Link className={aeroButtonClass("primary", "lg")}>`. `cx(...)` from the same file joins class names.
+- `<SkyBackground />` and `<ThemeToggle />` are already rendered by `Layout`. Don't add them again.
+  - `SkyBackground` is the fixed decorative scene behind everything: stars, the full moon (night only), `Skyline` (SVG city, control tower and wind turbines along the bottom) and rising bubbles.
+  - Its colors come from the `--aero-skyline-*`, `--aero-moon-opacity`, `--aero-beacon-opacity`, `--aero-stars-opacity` and `--aero-bubble-opacity` tokens.
+- `.app-main` centers text (`text-align: center`). Set `text-align: left` on anything that reads better left-aligned, such as lists, tables and long paragraphs.
+- Utility class: `.text-muted`.
+
+**Gotchas**
+- When writing `backdrop-filter` with a `-webkit-` prefix, put the **prefixed line first**. The build minifier keeps only the last of the pair, and Chrome/Edge ignore the prefixed version. Dev mode won't show the problem.
+- Respect `prefers-reduced-motion` for any animation.
 
 ---
 
@@ -324,7 +354,7 @@ frontend/src/
     results/FlightSummary.tsx, DelayGauge.tsx, ReasonList.tsx
     eco/EmissionsCard.tsx, EcoComparison.tsx
     map/FlightMap.tsx, PlaneMarker.tsx, AirportMarker.tsx
-    aero/GlassPanel.tsx, AeroButton.tsx, BubbleBackground.tsx, ThemeToggle.tsx
+    aero/GlassPanel.tsx, AeroButton.tsx, SkyBackground.tsx, Skyline.tsx, ThemeToggle.tsx
   mocks/lookup.json        # sample FlightLookupResponse for building UI before the backend is ready
 ```
 ### Routes (React Router)
@@ -350,7 +380,7 @@ The team has assigned these roles. Fill in the Owner column so AI agents know wh
 
 | Role | Owner | Owns | MVP deliverables | Stretch |
 |---|---|---|---|---|
-| **A — Frontend and Aero Theme** | _TBD_ | `frontend/` UI, design system, pages | Vite proxy fix; React Router setup (`Layout`, routes, nav); design tokens (light and dark); `GlassPanel`/`AeroButton`/`BubbleBackground`/`ThemeToggle`; Search page; Results page rendering `FlightLookupResponse` from mocks, then the real API; loading/error/empty states | Sounds/music toggle, animated sky, splash screen, mobile layout |
+| **A — Frontend and Aero Theme** | _TBD_ | `frontend/` UI, design system, pages | Vite proxy fix; React Router setup (`Layout`, routes, nav); design tokens (light and dark); `GlassPanel`/`AeroButton`/`SkyBackground`/`ThemeToggle`; Search page; Results page rendering `FlightLookupResponse` from mocks, then the real API; loading/error/empty states | Sounds/music toggle, animated sky, splash screen, mobile layout |
 | **B — Flight Data and Backend Core** | _TBD_ | `clients/aerodatabox_client.py`, `services/flight_lookup.py`, `cache.py`, `models/schemas.py`, demo mode | Pydantic schemas for the contract; AeroDataBox client; `/api/flights/lookup` (combines prediction and emissions); TTL cache; recorded fixtures + `DEMO_MODE`; `.env.example` updates | "Recent searches", hosting/deploy |
 | **C — Delay Prediction and ML** | _TBD_ | `services/delay_predictor.py`, weather/FAA clients, `backend/ml/` | Open-Meteo + FAA NAS clients; heuristic v1 with reasons; `/api/predict`; `/api/airports/{iata}` | **BTS model v2** (`ml/train.py`, joblib model, blended prediction), accuracy stat for the About page, historical delay chart data |
 | **D — Eco and Map** | _TBD_ | `services/emissions.py`, TIM client, eco UI, map tab | Google TIM client + fallback; `/api/eco/emissions`; comparison constants; `EmissionsCard` + `EcoComparison` UI; Map tab with OpenSky live planes + airports | Route arc on map, eco score badge, greener alternatives (train/car), "delay carbon cost" |

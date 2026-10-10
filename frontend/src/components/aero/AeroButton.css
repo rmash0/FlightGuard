@@ -1,0 +1,110 @@
+.aero-button {
+  --btn-top: var(--aero-gel-primary-top);
+  --btn-bottom: var(--aero-gel-primary-bottom);
+  --btn-border: var(--aero-gel-primary-border);
+  --btn-glow: var(--aero-gel-primary-glow);
+  --btn-text: #fff;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 22px;
+  overflow: hidden;
+  border: 1px solid var(--btn-border);
+  border-radius: var(--aero-radius-pill);
+  color: var(--btn-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  text-shadow: 0 1px 1px rgba(0, 40, 80, 0.35);
+  cursor: pointer;
+  /* Top-half gloss over the gel color */
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0) 50%),
+    linear-gradient(180deg, var(--btn-top), var(--btn-bottom));
+  /* Size the gradients to the border box so they don't tile into the bottom border. */
+  background-origin: border-box;
+  box-shadow:
+    0 4px 14px var(--btn-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* Shine sweep on hover */
+.aero-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+.aero-button:hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.aero-button:hover::after {
+  left: 120%;
+}
+
+.aero-button:active {
+  filter: brightness(0.95);
+  transform: translateY(1px);
+}
+
+.aero-button:focus-visible {
+  box-shadow:
+    var(--aero-focus),
+    0 4px 14px var(--btn-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.aero-button:disabled {
+  opacity: 0.55;
+  filter: saturate(0.4);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.aero-button--eco {
+  --btn-top: var(--aero-gel-eco-top);
+  --btn-bottom: var(--aero-gel-eco-bottom);
+  --btn-border: var(--aero-gel-eco-border);
+  --btn-glow: var(--aero-gel-eco-glow);
+}
+
+.aero-button--glass {
+  --btn-top: var(--aero-glass-strong);
+  --btn-bottom: var(--aero-glass-bg);
+  --btn-border: var(--aero-glass-border);
+  --btn-glow: rgba(0, 0, 0, 0.08);
+  --btn-text: var(--aero-text);
+
+  text-shadow: none;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.aero-button--lg {
+  padding: 13px 30px;
+  font-size: 1.1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aero-button,
+  .aero-button::after {
+    transition: none;
+  }
+}
