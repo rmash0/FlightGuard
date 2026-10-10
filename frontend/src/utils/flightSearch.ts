@@ -5,15 +5,14 @@
 export const SEARCH_PAST_DAYS = 7;
 export const SEARCH_FUTURE_DAYS = 30;
 
-// IATA airline code (2 chars, at least one letter: DL, B6, 9E) or ICAO code (3 letters: DAL),
-// then a 1-4 digit flight number and an optional suffix letter.
-const IATA_FLIGHT = /^([A-Z0-9]{2})(\d{1,4}[A-Z]?)$/;
-const ICAO_FLIGHT = /^([A-Z]{3})(\d{1,4}[A-Z]?)$/;
+// IATA airline code (2 chars, at least one letter: DL, B6, 9E) + a 1-4 digit flight number.
+// Matches the backend's check in routes_flights.py, so anything we accept, the API accepts.
+const IATA_FLIGHT = /^([A-Z0-9]{2})(\d{1,4})$/;
 
 // "dl 1234", "DL-1234", "b6623" -> "DL1234", "B6623". Returns null if it isn't a flight number.
 export function normalizeFlightNumber(input: string): string | null {
   const compact = input.toUpperCase().replace(/[\s-]/g, "");
-  const match = IATA_FLIGHT.exec(compact) ?? ICAO_FLIGHT.exec(compact);
+  const match = IATA_FLIGHT.exec(compact);
 
   if (!match || !/[A-Z]/.test(match[1])) {
     return null;
@@ -46,7 +45,11 @@ export function getSearchDateRange(today: Date = new Date()) {
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+export function isIsoDate(date: string): boolean {
+  return DATE_PATTERN.test(date) && !Number.isNaN(Date.parse(date));
+}
+
 // YYYY-MM-DD strings compare correctly as plain strings.
 export function isDateInRange(date: string, min: string, max: string): boolean {
-  return DATE_PATTERN.test(date) && date >= min && date <= max;
+  return isIsoDate(date) && date >= min && date <= max;
 }

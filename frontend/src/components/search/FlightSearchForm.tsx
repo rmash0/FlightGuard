@@ -3,26 +3,31 @@ import { useNavigate } from "react-router";
 
 import AeroButton from "../aero/AeroButton";
 import AeroInput from "../aero/AeroInput";
+import { cx } from "../aero/classes";
 import {
   getSearchDateRange,
   isDateInRange,
   normalizeFlightNumber,
 } from "../../utils/flightSearch";
+import { formatShortDate } from "../../utils/format";
 import "./FlightSearchForm.css";
 
-function formatDate(value: string): string {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
+type FlightSearchFormProps = {
+  // Compact: hidden labels and a smaller button, for the bar on top of the results page.
+  compact?: boolean;
+  initialFlightNumber?: string;
+  initialDate?: string;
+};
 
-function FlightSearchForm() {
+function FlightSearchForm({
+  compact = false,
+  initialFlightNumber = "",
+  initialDate,
+}: FlightSearchFormProps) {
   const navigate = useNavigate();
   const [range] = useState(() => getSearchDateRange());
-  const [flightInput, setFlightInput] = useState("");
-  const [date, setDate] = useState(range.today);
+  const [flightInput, setFlightInput] = useState(initialFlightNumber);
+  const [date, setDate] = useState(initialDate ?? range.today);
   const [submitted, setSubmitted] = useState(false);
 
   const flightNumber = normalizeFlightNumber(flightInput);
@@ -33,7 +38,7 @@ function FlightSearchForm() {
       : "That doesn't look like a flight number. Try an airline code plus a number, like DL1234 or B6 623.";
   const dateError = isDateInRange(date, range.min, range.max)
     ? null
-    : `Pick a date between ${formatDate(range.min)} and ${formatDate(range.max)}.`;
+    : `Pick a date between ${formatShortDate(range.min)} and ${formatShortDate(range.max)}.`;
 
   const showFlightError = submitted && flightError !== null;
   const showDateError = submitted && dateError !== null;
@@ -48,10 +53,16 @@ function FlightSearchForm() {
   }
 
   return (
-    <form className="flight-search" onSubmit={handleSubmit} noValidate>
+    <form
+      className={cx("flight-search", compact && "flight-search--compact")}
+      onSubmit={handleSubmit}
+      noValidate
+    >
       <div className="flight-search__fields">
         <div className="flight-search__field flight-search__field--number">
-          <label htmlFor="flight-number">Flight number</label>
+          <label htmlFor="flight-number" className={cx(compact && "visually-hidden")}>
+            Flight number
+          </label>
           <AeroInput
             id="flight-number"
             name="flightNumber"
@@ -68,7 +79,9 @@ function FlightSearchForm() {
         </div>
 
         <div className="flight-search__field flight-search__field--date">
-          <label htmlFor="flight-date">Date</label>
+          <label htmlFor="flight-date" className={cx(compact && "visually-hidden")}>
+            Date
+          </label>
           <AeroInput
             id="flight-date"
             name="date"
@@ -82,8 +95,8 @@ function FlightSearchForm() {
           />
         </div>
 
-        <AeroButton type="submit" size="lg" className="flight-search__submit">
-          Check flight
+        <AeroButton type="submit" size={compact ? "md" : "lg"} className="flight-search__submit">
+          {compact ? "Search" : "Check flight"}
         </AeroButton>
       </div>
 
