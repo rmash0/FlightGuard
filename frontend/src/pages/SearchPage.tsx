@@ -1,21 +1,21 @@
-import { Link } from "react-router";
-
 import GlassPanel from "../components/aero/GlassPanel";
-import { aeroButtonClass } from "../components/aero/classes";
+import FeatureList from "../components/features/FeatureList";
+import FlightSearchForm from "../components/search/FlightSearchForm";
+import "./SearchPage.css";
 
-// Placeholder until the search form lands (Role A, PR 3).
 function SearchPage() {
   return (
-    <GlassPanel as="section">
-      <h1>Will your flight be late?</h1>
-      <p className="text-muted">Flight search is coming soon.</p>
-      <Link
-        to="/flight/DL1234/2026-10-11"
-        className={aeroButtonClass("primary", "lg")}
-      >
-        Try a sample flight (DL1234)
-      </Link>
-    </GlassPanel>
+    <>
+      <GlassPanel as="section" className="search-hero">
+        <h1>Will your flight be late?</h1>
+        <p className="text-muted">
+          Enter a US airline flight to see its delay risk and carbon footprint.
+        </p>
+        <FlightSearchForm />
+      </GlassPanel>
+
+      <FeatureList variant="compact" />
+    </>
   );
 }
 

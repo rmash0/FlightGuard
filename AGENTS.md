@@ -156,9 +156,15 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 **Frontend** (`frontend/src/`)
 - **Routing:** React Router v8 is set up in `main.tsx` (`BrowserRouter`) and `App.tsx`. Every route from §8 exists, inside `components/Layout.tsx` (header + nav + `<Outlet />`).
 - **Pages:**
-  - `SearchPage` is a placeholder with a sample-flight link.
+  - `SearchPage` is done: a hero panel with `FlightSearchForm` and a compact row of feature pills (`<FeatureList variant="compact" />`). It's kept light so the skyline stays visible.
+  - The form validates the flight number and date with inline errors and navigates to `/flight/:number/:date`.
+  - Parsing lives in `utils/flightSearch.ts`:
+    - `normalizeFlightNumber` accepts `dl 1234`, `DL-1234`, `B6 623` and `DAL1234`, and returns uppercase with no spaces, or `null`.
+    - The search date range is 7 days back to 30 days ahead, set by `SEARCH_PAST_DAYS` / `SEARCH_FUTURE_DAYS`.
   - `ResultsPage` calls `lookupFlight` and renders bare text with loading, error and `null` states.
-  - `MapPage` and `AboutPage` are placeholders. `NotFoundPage` is done.
+  - `AboutPage` has an intro, full feature cards (`<FeatureList variant="cards" />`) and data credits. Model accuracy and methodology are still to come.
+  - `MapPage` is a placeholder. `NotFoundPage` is done.
+  - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
   - `api/client.ts` has `lookupFlight(number, date, signal?)` and `ApiError`, plus the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
   - `types/api.ts` mirrors the §8 contract, and `mocks/lookup.json` is a sample response.
@@ -260,6 +266,7 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 **Components** (`components/aero/`)
 - `<GlassPanel as="section" className="...">`: frosted card, the base for every panel. `as` can be `div` (default), `section`, `article`, `aside`, `header` or `footer`. Accepts all div props. Adjacent panels get a 20px gap automatically.
 - `<AeroButton variant="primary|eco|glass" size="md|lg">`: glossy gel button with all normal button props. `type` defaults to `"button"`. Use `eco` (green) for eco actions.
+- `<AeroInput>`: glassy pill input (text, date, etc.) that takes all normal input props. Set `aria-invalid={true}` to show the coral error border. Pair it with a `<label htmlFor>`.
 - `aeroButtonClass(variant?, size?, className?)` from `components/aero/classes.ts`: use this to style a **link** as an Aero button, e.g. `<Link className={aeroButtonClass("primary", "lg")}>`. `cx(...)` from the same file joins class names.
 - `<SkyBackground />` and `<ThemeToggle />` are already rendered by `Layout`. Don't add them again.
   - `SkyBackground` is the fixed decorative scene behind everything: stars, the full moon (night only), `Skyline` (SVG city, control tower and wind turbines along the bottom) and rising bubbles.
@@ -355,7 +362,7 @@ frontend/src/
   pages/SearchPage.tsx, ResultsPage.tsx, MapPage.tsx, AboutPage.tsx, NotFoundPage.tsx
   components/Layout.tsx    # glass nav + ThemeToggle + <Outlet />
   components/
-    search/FlightSearchForm.tsx
+    search/FlightSearchForm.tsx          # utils/flightSearch.ts holds the parsing/date helpers
     results/FlightSummary.tsx, DelayGauge.tsx, ReasonList.tsx
     eco/EmissionsCard.tsx, EcoComparison.tsx
     map/FlightMap.tsx, PlaneMarker.tsx, AirportMarker.tsx
