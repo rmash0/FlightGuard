@@ -3,6 +3,8 @@
 
 import lookupMock from "../mocks/lookup.json";
 import type { FlightLookupResponse } from "../types/api";
+import type { LiveAircraft } from "../components/map/PlaneMarker";
+import type { MapAirport } from "../components/map/AirportMarker";
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 const MOCK_LATENCY_MS = 400;
@@ -41,7 +43,11 @@ function mockDelay(signal?: AbortSignal): Promise<void> {
 // Mock-only test flights for previewing every results-page state:
 // ZZ404 / ZZ502 / ZZ503 -> that API error, ZZ1 -> no prediction or emissions,
 // ZZ2 -> a delayed flight with high risk. Any other number returns the sample flight.
-const MOCK_ERROR_FLIGHTS: Record<string, number> = { ZZ404: 404, ZZ502: 502, ZZ503: 503 };
+const MOCK_ERROR_FLIGHTS: Record<string, number> = {
+  ZZ404: 404,
+  ZZ502: 502,
+  ZZ503: 503,
+};
 
 function mockLookup(number: string, date: string): FlightLookupResponse {
   if (number in MOCK_ERROR_FLIGHTS) {
@@ -88,4 +94,54 @@ export async function lookupFlight(
 
   const params = new URLSearchParams({ number, date });
   return getJson<FlightLookupResponse>(`/api/flights/lookup?${params}`, signal);
+}
+
+export type MapBounds = {
+  lamin: number;
+  lamax: number;
+  lomin: number;
+  lomax: number;
+};
+
+export type LiveAircraftResponse = {
+  updated_at: number | null;
+  flights: LiveAircraft[];
+};
+
+export async function getLiveAircraft(
+  bounds: MapBounds,
+  signal?: AbortSignal,
+): Promise<LiveAircraftResponse> {
+  if (USE_MOCKS) {
+    await mockDelay(signal);
+    return {
+      updated_at: null,
+      flights: [],
+    };
+  }
+
+  const params = new URLSearchParams({
+    lamin: String(bounds.lamin),
+    lamax: String(bounds.lamax),
+    lomin: String(bounds.lomin),
+    lomax: String(bounds.lomax),
+  });
+
+  return getJson<LiveAircraftResponse>(`/api/flights/live?${params}`, signal);
+}
+
+export async function getMapAirports(
+  signal?: AbortSignal,
+): Promise<MapAirport[]> {
+  if (USE_MOCKS) {
+    await mockDelay(signal);
+    return [];
+  }
+
+  const data = await getJson<MapAirport[] | { airports: MapAirport[] }>(
+    "/api/airports",
+    signal,
+  );
+
+  return Array.isArray(data) ? data : data.airports;
 }

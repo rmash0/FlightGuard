@@ -6,6 +6,9 @@ import { Plane, MapPin } from "lucide-react";
 import PlaneMarker from "./PlaneMarker";
 import type { LiveAircraft } from "./PlaneMarker";
 
+import AirportMarker from "./AirportMarker";
+import type { MapAirport } from "./AirportMarker";
+
 import "leaflet/dist/leaflet.css";
 
 export type MapBounds = {
@@ -17,6 +20,7 @@ export type MapBounds = {
 
 type FlightMapProps = {
   aircraft: LiveAircraft[];
+  airports?: MapAirport[];
   loading?: boolean;
   error?: string | null;
   onBoundsChange?: (bounds: MapBounds | null) => void;
@@ -74,6 +78,7 @@ function MapViewport({
 
 function FlightMap({
   aircraft,
+  airports = [],
   loading = false,
   error = null,
   onBoundsChange,
@@ -110,6 +115,10 @@ function FlightMap({
         />
 
         <MapViewport onBoundsChange={onBoundsChange} />
+
+        {airports.map((airport) => (
+          <AirportMarker key={airport.iata} airport={airport} />
+        ))}
 
         {aircraft.map((plane) => (
           <PlaneMarker key={plane.icao24} aircraft={plane} />
