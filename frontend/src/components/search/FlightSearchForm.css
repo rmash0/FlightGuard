@@ -1,0 +1,64 @@
+.flight-search {
+  max-width: 720px;
+  margin: 28px auto 0;
+}
+
+.flight-search__fields {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr auto;
+  align-items: end;
+  gap: 12px;
+  text-align: left;
+}
+
+.flight-search__field label {
+  display: block;
+  margin: 0 0 6px 18px;
+  color: var(--aero-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.flight-search__field--number .aero-input {
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.flight-search__field--number .aero-input::placeholder {
+  font-weight: 400;
+}
+
+.flight-search__submit {
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+.flight-search__errors {
+  margin-top: 12px;
+  color: var(--aero-coral);
+  font-weight: 600;
+}
+
+.flight-search__errors p {
+  margin: 0 0 4px;
+}
+
+.flight-search--compact {
+  max-width: none;
+  margin: 0;
+}
+
+.flight-search--compact .aero-input {
+  min-height: 42px;
+}
+
+.flight-search--compact .flight-search__submit {
+  min-height: 42px;
+}
+
+@media (max-width: 640px) {
+  .flight-search__fields {
+    grid-template-columns: 1fr;
+  }
+}

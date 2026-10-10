@@ -30,8 +30,8 @@ Frutiger Aero (the Windows Vista/7, early-2000s "nature + technology" look) fits
 | Home screen | **Flight search** (delay prediction is the main goal). Map lives in its own tab. |
 | Routing | **React Router** (`react-router` v8, declarative mode with `BrowserRouter`). Routes in §8. |
 | Roles | Assigned by the team (§9). |
-| Scope | **US airlines only.** This lets us use free FAA and BTS data. |
-| Flight data API | **AeroDataBox** via RapidAPI (see §6.1). **Budget approved: about $10** (Pro tier). Not signed up yet. |
+| Scope | **US passenger airlines only, with at least one US airport.** International routes qualify when they start or end in the US. FAA and BTS signals may cover only the US portion of a route. |
+| Flight data API | **AeroDataBox** via RapidAPI (see §6.1). Pro tier is subscribed; the key is kept in the local `backend/.env`. |
 | Delay prediction | Heuristic first, then **train a model on BTS data if time permits**. |
 | CO2 source | **Google Travel Impact Model (TIM) API.** |
 | OpenSky account | None yet. Map uses anonymous access with caching. |
@@ -138,7 +138,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 | `GOOGLE_TIM_API_KEY` | Google Cloud key with the Travel Impact Model API enabled |
 | `OPEN_METEO_BASE_URL` | already in `.env.example` |
 | `OPENSKY_*` | already in `.env.example`. Unused until we get an account |
-| `DEMO_MODE` | `true` = serve recorded fixtures instead of calling APIs |
+| `DEMO_MODE` | `true` = serve an offline fixture instead of calling APIs |
 
 ---
 
@@ -148,26 +148,55 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `main.py`: FastAPI app "FlightGuard API". CORS allows `http://localhost:5173` only.
 - `GET /` and `GET /api/health` → `{"status": "ok"}`.
 - `api/routes_flights.py`: `GET /api/flights/demo` returns one hard-coded demo flight.
-- `clients/opensky_client.py`: `get_aircraft_in_area(lamin, lamax, lomin, lomax)` calls OpenSky anonymously. Not wired to a route.
-- `models/` and `services/` are empty.
+- `GET /api/flights/lookup` accepts supported US passenger airline codes only and requires the origin or destination to be in the US. It caches successful lookups for 10 minutes and returns clear 404/422/502/503 errors. Live mode needs `AERODATABOX_API_KEY`.
+- `models/schemas.py` mirrors the TypeScript lookup contract. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Live lookup calls Role D's emissions service; prediction remains `null` until Role C adds its service hook below.
+- `services/cache.py` provides an in-process async TTL cache with one in-flight fetch per key. Each backend process has its own cache.
+- `GET /api/flights/live` serves OpenSky aircraft within the map viewport from a 60-second backend cache.
+- `GET /api/flights/live/{icao24}/details` looks up flight number and origin/destination via AeroDataBox only when a plane popup opens. Results, including unavailable matches, are cached for 10 minutes per aircraft and callsign; an unconfirmed route is never guessed.
 
 **Frontend** (`frontend/src/`)
 - **Routing:** React Router v8 is set up in `main.tsx` (`BrowserRouter`) and `App.tsx`. Every route from §8 exists, inside `components/Layout.tsx` (header + nav + `<Outlet />`).
 - **Pages:**
-  - `SearchPage` is a placeholder with a sample-flight link.
-  - `ResultsPage` calls `lookupFlight` and renders bare text with loading, error and `null` states.
-  - `MapPage` and `AboutPage` are placeholders. `NotFoundPage` is done.
+  - `SearchPage` is done: a hero panel with `FlightSearchForm` and a compact row of feature pills (`<FeatureList variant="compact" />`). It's kept light so the skyline stays visible.
+  - The form validates the flight number and date with inline errors and navigates to `/flight/:number/:date`.
+  - Parsing lives in `utils/flightSearch.ts`:
+    - `normalizeFlightNumber` accepts `dl 1234`, `DL-1234` and `B6 623`, and returns uppercase with no spaces, or `null`.
+    - It allows the same flight numbers as the backend's check in `routes_flights.py`: a 2-character IATA code plus 1–4 digits. No ICAO codes like `DAL1234` and no suffix letters. Change both together.
+    - The search date range is 7 days back to 30 days ahead, set by `SEARCH_PAST_DAYS` / `SEARCH_FUTURE_DAYS`.
+  - `ResultsPage` is done:
+    - A compact search bar at the top, prefilled from the URL.
+    - `FlightSummary`: route card with airport-local times, duration, a status badge, and the scheduled time struck through when the airline posts a new one.
+    - The "Delay forecast" panel: `DelayGauge` (half-circle dial, risk badge, estimated minutes, reported-delay note) plus `ReasonList` (high impact first).
+    - Role D's `EmissionsCard`, which brings its own panel, next to the delay forecast.
+    - A loading orb, and a friendly message for each API error (404, 422, 502, 503, network). "Try again" only appears for 502 and network errors.
+    - Empty-state copy when `prediction` or `emissions` is `null`.
+    - Messy URLs (`/flight/dl-1234/...`) redirect to the clean form. Invalid flight numbers or dates in the URL show a message without calling the API.
+  - `hooks/useFlightLookup.ts` wraps `lookupFlight` with loading/error/ready state and `retry()`. `utils/format.ts` has the time, date and duration formatters.
+  - The Search nav tab stays highlighted on `/flight/*`.
+  - `AboutPage` has an intro, full feature cards (`<FeatureList variant="cards" />`) and data credits. Model accuracy and methodology are still to come.
+  - `MapPage` shows live aircraft and airports. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. `NotFoundPage` is done.
+  - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
-  - `api/client.ts` has `lookupFlight(number, date, signal?)` and `ApiError`, plus the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status`) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - **Mock test flights** (mocks only):
+    - `ZZ404`, `ZZ502`, `ZZ503` return those errors.
+    - `ZZ1` has `null` prediction and emissions.
+    - `ZZ2` is a delayed, high-risk flight.
+    - Any other number returns the sample flight.
+  - Mocks vs real backend:
+    - With mocks off and the backend in `DEMO_MODE=true`, only `DL1234` on `2026-10-11` exists. Everything else returns 404.
+    - `.env.local` overrides `.env.example`, so to test against the real backend, set `VITE_USE_MOCKS=false` there (or prefix the command) and restart Vite.
   - `types/api.ts` mirrors the §8 contract, and `mocks/lookup.json` is a sample response.
 - **Vite dev proxy:** `/api` → `http://127.0.0.1:8000`, so the frontend uses relative URLs only and CORS isn't involved in dev.
-- `components/eco/EmissionsCard.tsx` is a placeholder version for Role D (props `{ emissions: Emissions | null }`).
+- `components/eco/EmissionsCard.tsx` (Role D) is built: cabin-class picker, kg CO2e per passenger, estimate tier, `EcoComparison`, and the source note. Props: `{ emissions: Emissions | null }`.
+  - It renders **its own** `GlassPanel` and "Carbon Footprint" heading, including the `null` state. `ResultsPage` places it straight into the results grid without wrapping it.
 - `config.ts` holds `APP_NAME`. `<title>` is "FlightGuard".
 - **Aero theme:** done. Tokens for light and dark are in `index.css`, the shared components are in `components/aero/`, and the glass nav bar, sky background (bubbles, city skyline with control tower and wind turbines, stars and a full moon at night), theme toggle and Aero favicon are in place. Page content is centered. See §7 "Using the theme".
 - `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` (Role D) is still unstyled.
 
 **Known gotchas**
 - OpenSky anonymous access is heavily rate-limited. Cache about 15 s and keep bounding boxes small.
+- Existing `api/eco.py` reads `GOOGLE_API_KEY`, while the agreed environment variable is `GOOGLE_TIM_API_KEY`; Role D needs to reconcile this in the eco service.
 
 ---
 
@@ -176,11 +205,11 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 ### 6.1 Flight Search (home page) — data source
 **Recommendation: AeroDataBox via RapidAPI.**
 - Its "flight status" endpoint looks up a flight by number + date. It returns scheduled/estimated/actual times, origin/destination, status and aircraft type: everything the prediction and CO2 features need.
-- **Free Basic tier (about 600 units/month)** is enough for development if we cache. Upgrade to **Pro (about $5–8/month)** before the demo. **Budget approved: about $10 total.** Units ≠ requests: flight status costs extra when a flight plan is included. Check the live pricing page before subscribing.
+- **Free Basic tier (400 units/month as of October 2026)** is enough for development if we cache. Upgrade to **Pro ($8/month as of October 2026)** before the demo. **Budget approved: about $10 total.** Units ≠ requests; the single-day flight status endpoint is Tier 2. Basic requires visible AeroDataBox attribution. Check the [live pricing page](https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing) before subscribing.
 - Backup: **FlightAware AeroAPI Personal** (pay per query, with about $5/month of usage credit, max 10 result sets/min, no historical data). Better US data, but tighter limits and more setup.
 - Not recommended: AviationStack (free tier is about 100 requests/month and too limited).
 
-**Rules:** cache lookups by `(flight_number, date)` for about 10 minutes. Record real responses into `backend/app/data/fixtures/` so **demo mode** works if the API or Wi-Fi fails during judging.
+**Rules:** cache lookups by `(flight_number, date)` for about 10 minutes. A synthetic fixture is checked in for offline demo mode. [AeroDataBox Basic/Pro terms](https://aerodatabox.com/2026-09-terms-update) currently cap retained provider data at 7 days; any real response recorded for judging must be deleted within that window. Do not commit provider responses as permanent fixtures.
 
 ### 6.2 Delay Prediction
 "Delayed" = **arrival 15+ minutes late** (the FAA/BTS standard definition).
@@ -257,12 +286,14 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 **Components** (`components/aero/`)
 - `<GlassPanel as="section" className="...">`: frosted card, the base for every panel. `as` can be `div` (default), `section`, `article`, `aside`, `header` or `footer`. Accepts all div props. Adjacent panels get a 20px gap automatically.
 - `<AeroButton variant="primary|eco|glass" size="md|lg">`: glossy gel button with all normal button props. `type` defaults to `"button"`. Use `eco` (green) for eco actions.
+- `<AeroInput>`: glassy pill input (text, date, etc.) that takes all normal input props. Set `aria-invalid={true}` to show the coral error border. Pair it with a `<label htmlFor>`.
 - `aeroButtonClass(variant?, size?, className?)` from `components/aero/classes.ts`: use this to style a **link** as an Aero button, e.g. `<Link className={aeroButtonClass("primary", "lg")}>`. `cx(...)` from the same file joins class names.
 - `<SkyBackground />` and `<ThemeToggle />` are already rendered by `Layout`. Don't add them again.
   - `SkyBackground` is the fixed decorative scene behind everything: stars, the full moon (night only), `Skyline` (SVG city, control tower and wind turbines along the bottom) and rising bubbles.
   - Its colors come from the `--aero-skyline-*`, `--aero-moon-opacity`, `--aero-beacon-opacity`, `--aero-stars-opacity` and `--aero-bubble-opacity` tokens.
 - `.app-main` centers text (`text-align: center`). Set `text-align: left` on anything that reads better left-aligned, such as lists, tables and long paragraphs.
-- Utility class: `.text-muted`.
+- `<AeroBadge tone="sky|aqua|leaf|amber|coral|muted">`: small glossy pill for statuses, delay risk, an eco score and so on. Amber uses dark text for contrast.
+- Utility classes: `.text-muted`, and `.visually-hidden` (hidden on screen, still read by screen readers).
 
 **Gotchas**
 - When writing `backdrop-filter` with a `-webkit-` prefix, put the **prefixed line first**. The build minifier keeps only the last of the pair, and Chrome/Edge ignore the prefixed version. Dev mode won't show the problem.
@@ -281,10 +312,15 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 | GET | `/api/predict?number=...&date=...` | Prediction | `DelayPrediction` |
 | GET | `/api/eco/emissions?carrier=DL&number=1234&origin=RDU&destination=ATL&date=...` | Eco | `Emissions` |
 | GET | `/api/flights/live?lamin&lamax&lomin&lomax` | Eco/Map | live aircraft (cached) |
+| GET | `/api/flights/live/{icao24}/details?callsign=DAL214` | Eco/Map | `LiveFlightDetails` (below), fetched on popup open |
 | GET | `/api/airports` | Eco/Map | trimmed US airport list |
 | GET | `/api/airports/{iata}` | Prediction | weather + FAA status + risk |
 
 `/api/flights/lookup` calls the flight client and then the prediction and emissions services. The frontend makes **one call** for the results page.
+
+`LiveFlightDetails` has `flight_number`, `origin`, and `destination`, each a nullable string. For example: `{ "flight_number": "DL214", "origin": "ATL — Hartsfield-Jackson Atlanta International Airport", "destination": "FCO — Leonardo da Vinci International Airport" }`. When the provider cannot confirm that an active flight matches both the aircraft and callsign, all three fields are `null`. The map keeps altitude, speed, and heading from OpenSky without a details lookup until the popup opens.
+
+**Backend service hooks:** Role C exposes `async predict_delay(flight: Flight) -> DelayPrediction | None` in `services/delay_predictor.py`. Role D exposes `async get_emissions_for_flight(flight: Flight) -> Emissions | None` in `services/emissions.py`. The lookup route calls either when its module exists; a failure in one service yields `null` for that field.
 
 ### `FlightLookupResponse` (shape to match in Pydantic `models/` and TS `types/`)
 ```json
@@ -350,7 +386,7 @@ frontend/src/
   pages/SearchPage.tsx, ResultsPage.tsx, MapPage.tsx, AboutPage.tsx, NotFoundPage.tsx
   components/Layout.tsx    # glass nav + ThemeToggle + <Outlet />
   components/
-    search/FlightSearchForm.tsx
+    search/FlightSearchForm.tsx          # utils/flightSearch.ts holds the parsing/date helpers
     results/FlightSummary.tsx, DelayGauge.tsx, ReasonList.tsx
     eco/EmissionsCard.tsx, EcoComparison.tsx
     map/FlightMap.tsx, PlaneMarker.tsx, AirportMarker.tsx
@@ -381,7 +417,7 @@ The team has assigned these roles. Fill in the Owner column so AI agents know wh
 | Role | Owner | Owns | MVP deliverables | Stretch |
 |---|---|---|---|---|
 | **A — Frontend and Aero Theme** | _TBD_ | `frontend/` UI, design system, pages | Vite proxy fix; React Router setup (`Layout`, routes, nav); design tokens (light and dark); `GlassPanel`/`AeroButton`/`SkyBackground`/`ThemeToggle`; Search page; Results page rendering `FlightLookupResponse` from mocks, then the real API; loading/error/empty states | Sounds/music toggle, animated sky, splash screen, mobile layout |
-| **B — Flight Data and Backend Core** | _TBD_ | `clients/aerodatabox_client.py`, `services/flight_lookup.py`, `cache.py`, `models/schemas.py`, demo mode | Pydantic schemas for the contract; AeroDataBox client; `/api/flights/lookup` (combines prediction and emissions); TTL cache; recorded fixtures + `DEMO_MODE`; `.env.example` updates | "Recent searches", hosting/deploy |
+| **B — Flight Data and Backend Core** | _TBD_ | `clients/aerodatabox_client.py`, `services/flight_lookup.py`, `cache.py`, `models/schemas.py`, demo mode | Pydantic schemas for the contract; AeroDataBox client; `/api/flights/lookup` (combines prediction and emissions); TTL cache; offline fixture + `DEMO_MODE`; `.env.example` updates | "Recent searches", hosting/deploy |
 | **C — Delay Prediction and ML** | _TBD_ | `services/delay_predictor.py`, weather/FAA clients, `backend/ml/` | Open-Meteo + FAA NAS clients; heuristic v1 with reasons; `/api/predict`; `/api/airports/{iata}` | **BTS model v2** (`ml/train.py`, joblib model, blended prediction), accuracy stat for the About page, historical delay chart data |
 | **D — Eco and Map** | _TBD_ | `services/emissions.py`, TIM client, eco UI, map tab | Google TIM client + fallback; `/api/eco/emissions`; comparison constants; `EmissionsCard` + `EcoComparison` UI; Map tab with OpenSky live planes + airports | Route arc on map, eco score badge, greener alternatives (train/car), "delay carbon cost" |
 

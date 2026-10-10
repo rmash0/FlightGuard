@@ -1,0 +1,41 @@
+.aero-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 18px;
+  border: 1px solid var(--aero-glass-border);
+  border-radius: var(--aero-radius-pill);
+  color: var(--aero-text);
+  font: inherit;
+  font-size: 1.05rem;
+  background-color: var(--aero-glass-strong);
+  /* Recessed look: inner shadow at the top, highlight at the bottom */
+  box-shadow:
+    inset 0 2px 6px rgba(0, 40, 80, 0.15),
+    inset 0 -1px 0 var(--aero-glass-inner);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.aero-input::placeholder {
+  color: var(--aero-text-muted);
+  opacity: 0.8;
+}
+
+.aero-input:focus-visible {
+  border-color: var(--aero-accent);
+  border-radius: var(--aero-radius-pill);
+  box-shadow:
+    var(--aero-focus),
+    inset 0 2px 6px rgba(0, 40, 80, 0.15);
+}
+
+.aero-input[aria-invalid='true'] {
+  border-color: var(--aero-coral);
+}
+
+.aero-input[aria-invalid='true']:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(255, 111, 97, 0.45),
+    inset 0 2px 6px rgba(0, 40, 80, 0.15);
+}

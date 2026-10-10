@@ -1,0 +1,99 @@
+.feature-list {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature-list + .glass-panel {
+  margin-top: 20px;
+}
+
+/* Glossy orb icon */
+.feature-list__orb {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 45%),
+    radial-gradient(circle at 50% 60%, var(--orb-color), color-mix(in srgb, var(--orb-color), #000 25%));
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--orb-color), transparent 55%);
+}
+
+.feature-list__orb--sky {
+  --orb-color: var(--aero-accent);
+}
+
+.feature-list__orb--leaf {
+  --orb-color: var(--aero-leaf);
+}
+
+.feature-list__orb--amber {
+  --orb-color: var(--aero-amber);
+}
+
+/* Compact: a single row of small glass pills */
+
+.feature-list--compact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.feature-list--compact .glass-panel.feature-list__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px 6px 8px;
+  border-radius: var(--aero-radius-pill);
+}
+
+.feature-list--compact .feature-list__orb {
+  width: 20px;
+  height: 20px;
+}
+
+.feature-list__title {
+  color: var(--aero-heading);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* Cards: three columns with descriptions */
+
+.feature-list--cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.feature-list--cards li {
+  display: flex;
+}
+
+.feature-list--cards .glass-panel.feature-list__item {
+  flex: 1;
+  padding: 20px;
+  border-radius: var(--aero-radius-md);
+}
+
+.feature-list--cards .feature-list__orb {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 10px;
+}
+
+.feature-list--cards h2 {
+  margin-bottom: 6px;
+  font-size: 1.1rem;
+}
+
+.feature-list--cards p {
+  font-size: 0.95rem;
+}
+
+@media (max-width: 760px) {
+  .feature-list--cards {
+    grid-template-columns: 1fr;
+  }
+}

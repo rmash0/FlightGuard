@@ -1,73 +1,155 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, Navigate, useParams } from "react-router";
 
-import { lookupFlight } from "../api/client";
+import { ApiError } from "../api/client";
+import AeroButton from "../components/aero/AeroButton";
 import GlassPanel from "../components/aero/GlassPanel";
+import { aeroButtonClass } from "../components/aero/classes";
 import EmissionsCard from "../components/eco/EmissionsCard";
-import type { FlightLookupResponse } from "../types/api";
+import DelayGauge from "../components/results/DelayGauge";
+import FlightSummary from "../components/results/FlightSummary";
+import ReasonList from "../components/results/ReasonList";
+import FlightSearchForm from "../components/search/FlightSearchForm";
+import { useFlightLookup } from "../hooks/useFlightLookup";
+import { isIsoDate, normalizeFlightNumber } from "../utils/flightSearch";
+import { formatFlightDate } from "../utils/format";
+import "./ResultsPage.css";
 
-// `key` records which flight a result belongs to, so a stale result reads as loading.
-type LookupResult =
-  | { key: string; status: "error" }
-  | { key: string; status: "ready"; data: FlightLookupResponse };
+type ResultsMessageProps = {
+  title: string;
+  message: string;
+  onRetry?: () => void;
+};
 
-// Bare-bones results view to prove routing + API client end to end.
-// The styled version (FlightSummary, DelayGauge, ReasonList) comes in Role A, PR 4.
-function ResultsPage() {
-  const { number = "", date = "" } = useParams();
-  const key = `${number}/${date}`;
-  const [result, setResult] = useState<LookupResult | null>(null);
+function ResultsMessage({ title, message, onRetry }: ResultsMessageProps) {
+  return (
+    <GlassPanel as="section" className="results-message">
+      <h1>{title}</h1>
+      <p className="text-muted">{message}</p>
+      <div className="results-message__actions">
+        {onRetry && <AeroButton onClick={onRetry}>Try again</AeroButton>}
+        <Link to="/" className={aeroButtonClass("glass")}>
+          Back to search
+        </Link>
+      </div>
+    </GlassPanel>
+  );
+}
 
-  useEffect(() => {
-    const controller = new AbortController();
+// Friendly copy for each error the lookup endpoint can return (see AGENTS.md §5).
+function describeError(error: unknown, number: string, date: string) {
+  const status = error instanceof ApiError ? error.status : null;
 
-    lookupFlight(number, date, controller.signal)
-      .then((data) => setResult({ key, status: "ready", data }))
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setResult({ key, status: "error" });
-        }
-      });
+  switch (status) {
+    case 404:
+      return {
+        title: `We couldn't find ${number}`,
+        message: `No ${number} flight departs on ${formatFlightDate(date)}. Double-check the flight number and date.`,
+        retryable: false,
+      };
+    case 422:
+      return {
+        title: "That flight number doesn't look right",
+        message: "Use an airline code plus a number, like DL1234.",
+        retryable: false,
+      };
+    case 502:
+      return {
+        title: "Flight data is taking a breather",
+        message: "Our flight data provider isn't responding right now. Try again in a minute.",
+        retryable: true,
+      };
+    case 503:
+      return {
+        title: "Live flight data isn't connected",
+        message: "The server has no flight data API key yet. Turn on demo mode or add the key.",
+        retryable: false,
+      };
+    default:
+      return {
+        title: "We couldn't reach the server",
+        message: "Check your connection and try again.",
+        retryable: true,
+      };
+  }
+}
 
-    return () => controller.abort();
-  }, [key, number, date]);
+function FlightResults({ number, date }: { number: string; date: string }) {
+  const { state, retry } = useFlightLookup(number, date);
 
-  if (!result || result.key !== key) {
+  if (state.status === "loading") {
     return (
-      <GlassPanel as="section">
-        <p>Looking up {number}...</p>
+      <GlassPanel as="section" className="results-loading" aria-live="polite">
+        <span className="results-loading__orb" aria-hidden="true" />
+        <p>Checking {number} for {formatFlightDate(date)}...</p>
       </GlassPanel>
     );
   }
 
-  if (result.status === "error") {
-    return (
-      <GlassPanel as="section">
-        <h1>We couldn't load {number}</h1>
-        <p>
-          Check the flight number and date, or <Link to="/">search again</Link>.
-        </p>
-      </GlassPanel>
-    );
+  if (state.status === "error") {
+    const { title, message, retryable } = describeError(state.error, number, date);
+    return <ResultsMessage title={title} message={message} onRetry={retryable ? retry : undefined} />;
   }
 
-  const { flight, prediction, emissions } = result.data;
+  const { flight, prediction, emissions } = state.data;
 
   return (
-    <GlassPanel as="section">
-      <h1>{flight.number}</h1>
-      <p>
-        {flight.origin.iata} → {flight.destination.iata} · {flight.date} ·{" "}
-        {flight.status}
-      </p>
-      <p>
-        Delay risk:{" "}
-        {prediction
-          ? `${prediction.risk} (about ${prediction.estimated_delay_minutes} min)`
-          : "unavailable"}
-      </p>
-      <EmissionsCard emissions={emissions} />
-    </GlassPanel>
+    <>
+      <FlightSummary flight={flight} />
+
+      <div className="results-grid">
+        <GlassPanel as="section" className="results-panel" aria-labelledby="delay-title">
+          <h2 id="delay-title">Delay forecast</h2>
+          {prediction ? (
+            <>
+              <DelayGauge prediction={prediction} />
+              <h3 className="results-panel__subheading">Why</h3>
+              <ReasonList reasons={prediction.reasons} />
+              <p className="results-panel__footnote">Model: {prediction.model}</p>
+            </>
+          ) : (
+            <p className="text-muted">
+              We couldn't make a delay forecast for this flight right now.
+            </p>
+          )}
+        </GlassPanel>
+
+        {/* EmissionsCard (Role D) renders its own GlassPanel and heading, including the null state. */}
+        <EmissionsCard emissions={emissions} />
+      </div>
+    </>
+  );
+}
+
+function ResultsPage() {
+  const { number = "", date = "" } = useParams();
+  const flightNumber = normalizeFlightNumber(number);
+
+  // Tidy hand-typed URLs like /flight/dl-1234/... to the canonical form.
+  if (flightNumber && flightNumber !== number) {
+    return <Navigate to={`/flight/${flightNumber}/${date}`} replace />;
+  }
+
+  return (
+    <>
+      <GlassPanel className="results-search">
+        {/* Keyed so the form refills when the page moves to a different flight. */}
+        <FlightSearchForm
+          key={`${number}/${date}`}
+          compact
+          initialFlightNumber={number}
+          initialDate={isIsoDate(date) ? date : undefined}
+        />
+      </GlassPanel>
+
+      {flightNumber && isIsoDate(date) ? (
+        <FlightResults number={flightNumber} date={date} />
+      ) : (
+        <ResultsMessage
+          title="That link doesn't look right"
+          message="Flight links look like /flight/DL1234/2026-10-11. Try searching instead."
+        />
+      )}
+    </>
   );
 }
 

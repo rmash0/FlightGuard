@@ -1,0 +1,117 @@
+.flight-summary__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.flight-summary__header h1 {
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.flight-route {
+  display: grid;
+  grid-template-columns: 1fr minmax(120px, 1.2fr) 1fr;
+  /* Top-aligned so both airport codes line up even when one side has an updated time */
+  align-items: start;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.flight-route__end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.flight-route__label {
+  color: var(--aero-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.flight-route__code {
+  color: var(--aero-heading);
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: var(--aero-heading-glow);
+}
+
+.flight-route__name {
+  color: var(--aero-text-muted);
+  font-size: 0.9rem;
+}
+
+.flight-route__time {
+  margin-top: 6px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.flight-route__time s {
+  color: var(--aero-text-muted);
+  font-weight: 400;
+}
+
+.flight-route__updated {
+  color: var(--aero-amber);
+  font-weight: 700;
+}
+
+.flight-route__path {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  /* Puts the plane level with the airport codes */
+  margin-top: 6px;
+}
+
+.flight-route__duration {
+  color: var(--aero-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Dashed flight path with a plane in the middle */
+.flight-route__line {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.flight-route__line::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 2px dashed color-mix(in srgb, var(--aero-accent), transparent 35%);
+}
+
+.flight-route__plane {
+  position: relative;
+  padding: 2px;
+  border-radius: 50%;
+  fill: #fff;
+  background: radial-gradient(circle at 35% 30%, #8fdcff, var(--aero-accent-strong));
+  box-shadow: 0 2px 8px var(--aero-gel-primary-glow);
+}
+
+@media (max-width: 560px) {
+  .flight-route {
+    grid-template-columns: 1fr;
+  }
+
+  .flight-route__line {
+    width: 60%;
+    margin: 0 auto;
+  }
+}
