@@ -11,11 +11,6 @@
   margin-top: 20px;
 }
 
-/* Grid handles spacing; cancel the stacked-panel margin from GlassPanel.css */
-.results-grid > .glass-panel {
-  margin: 0;
-}
-
 .results-panel h2 {
   margin-bottom: 16px;
 }

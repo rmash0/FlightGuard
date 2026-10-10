@@ -130,6 +130,8 @@ function MapPage() {
         display: "flex",
         flexDirection: "column",
         gap: 24,
+        // .app-main centers text site-wide; this dashboard layout is designed left-aligned.
+        textAlign: "left",
       }}
     >
       <GlassPanel as="section">

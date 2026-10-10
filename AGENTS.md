@@ -283,7 +283,10 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 | Gel | `--aero-gel-primary-*`, `--aero-gel-eco-*` (`-top`, `-bottom`, `-border`, `-glow`) |
 
 **Components** (`components/aero/`)
-- `<GlassPanel as="section" className="...">`: frosted card, the base for every panel. `as` can be `div` (default), `section`, `article`, `aside`, `header` or `footer`. Accepts all div props. Adjacent panels get a 20px gap automatically.
+- `<GlassPanel as="section" className="...">`: frosted card, the base for every panel. `as` can be `div` (default), `section`, `article`, `aside`, `header` or `footer`. Accepts all div props.
+  - Panels stacked **directly** inside `<main>` (page-level siblings) get a 20px gap automatically.
+  - Panels inside your own grid or flex wrapper get no automatic margin. Space them with `gap`.
+  - `.app-main` centers text. A dashboard-style page (like `MapPage`) sets `textAlign: "left"` on its wrapper.
 - `<AeroButton variant="primary|eco|glass" size="md|lg">`: glossy gel button with all normal button props. `type` defaults to `"button"`. Use `eco` (green) for eco actions.
 - `<AeroInput>`: glassy pill input (text, date, etc.) that takes all normal input props. Set `aria-invalid={true}` to show the coral error border. Pair it with a `<label htmlFor>`.
 - `aeroButtonClass(variant?, size?, className?)` from `components/aero/classes.ts`: use this to style a **link** as an Aero button, e.g. `<Link className={aeroButtonClass("primary", "lg")}>`. `cx(...)` from the same file joins class names.
