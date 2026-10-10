@@ -119,11 +119,20 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `models/` and `services/` are empty.
 
 **Frontend** (`frontend/src/`)
-- `App.tsx`: "FlightGuard" heading + backend health check (hard-coded `http://127.0.0.1:8000`).
-- No search, map, theme or components yet. CSS is still the Vite template. `<title>` is still `frontend`.
+- **Routing:** React Router v8 is set up in `main.tsx` (`BrowserRouter`) and `App.tsx`. Every route from §8 exists, inside `components/Layout.tsx` (header + nav + `<Outlet />`).
+- **Pages:**
+  - `SearchPage` is a placeholder with a sample-flight link.
+  - `ResultsPage` calls `lookupFlight` and renders bare text with loading, error and `null` states.
+  - `MapPage` and `AboutPage` are placeholders. `NotFoundPage` is done.
+- **API:**
+  - `api/client.ts` has `lookupFlight(number, date, signal?)` and `ApiError`, plus the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - `types/api.ts` mirrors the §8 contract, and `mocks/lookup.json` is a sample response.
+- **Vite dev proxy:** `/api` → `http://127.0.0.1:8000`, so the frontend uses relative URLs only and CORS isn't involved in dev.
+- `components/eco/EmissionsCard.tsx` is a placeholder version for Role D (props `{ emissions: Emissions | null }`).
+- `config.ts` holds `APP_NAME`. `<title>` is "FlightGuard".
+- No Aero theme yet. `index.css` is a minimal neutral base, and the Vite template files have been removed.
 
 **Known gotchas**
-- The frontend fetches `127.0.0.1:8000` but CORS only allows `localhost:5173`. **Fix early:** add a Vite dev proxy (`/api` → `http://127.0.0.1:8000`) and use relative `/api/...` URLs.
 - OpenSky anonymous access is heavily rate-limited. Cache about 15 s and keep bounding boxes small.
 
 ---
