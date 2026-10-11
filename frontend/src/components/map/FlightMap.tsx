@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
 import type { LatLngBounds } from "leaflet";
 import { Plane, MapPin } from "lucide-react";
@@ -30,6 +30,32 @@ type FlightMapProps = {
 const US_CENTER: [number, number] = [39.5, -98.35];
 const DEFAULT_ZOOM = 5;
 const MAX_REQUEST_AREA = 100;
+
+// CARTO basemaps: airy Voyager by day (and in the aquarium), Dark Matter at night.
+const TILE_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+
+function readIsDark() {
+  return document.documentElement.dataset.theme === "dark";
+}
+
+// ThemeToggle writes the theme to <html data-theme>, so watch that attribute.
+function useIsDarkTheme() {
+  const [isDark, setIsDark] = useState(readIsDark);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => setIsDark(readIsDark()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  return isDark;
+}
 
 function convertBounds(bounds: LatLngBounds): MapBounds {
   return {
@@ -84,6 +110,8 @@ function FlightMap({
   error = null,
   onBoundsChange,
 }: FlightMapProps) {
+  const isDark = useIsDarkTheme();
+
   return (
     <div
       className="flight-map"
@@ -109,8 +137,9 @@ function FlightMap({
         }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          key={isDark ? "dark" : "light"}
+          attribution={TILE_ATTRIBUTION}
+          url={isDark ? DARK_TILES : LIGHT_TILES}
           maxZoom={19}
         />
 
@@ -187,7 +216,7 @@ function FlightMap({
         }}
       >
         <MapPin size={13} />
-        OpenStreetMap · OpenSky Network
+        OpenStreetMap · CARTO · OpenSky Network
       </div>
     </div>
   );

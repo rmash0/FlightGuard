@@ -152,6 +152,8 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `models/schemas.py` mirrors the TypeScript lookup contract, including `ModelInfo` for `GET /api/predict/model`. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Live lookup calls the delay predictor and Role D's emissions service.
 - `services/cache.py` provides an in-process async TTL cache with one in-flight fetch per key. Each backend process has its own cache.
 - `GET /api/flights/live` serves OpenSky aircraft within the map viewport from a 60-second backend cache.
+- `GET /api/airports` (Role D, `api/routes_airport_list.py`) returns the 873 US large/medium airports from `data/airports.json` (`iata`, `name`, `lat`, `lon`, `type`) with a one-day `Cache-Control`. `services/airport_directory.py` loads the file as UTF-8 and offers `find_airport(iata)`.
+- `GET /api/eco/emissions` fills missing coordinates from `airports.json`, so the contract call (no lat/lon) still gets the distance estimate when Google TIM has nothing. The TIM cascade (flight → route → distance) is cached for an hour per flight.
 - `GET /api/flights/live/{icao24}/details` looks up flight number and origin/destination via AeroDataBox only when a plane popup opens. Results, including unavailable matches, are cached for 10 minutes per aircraft and callsign; an unconfirmed route is never guessed.
   - Frontend: once a popup has an IATA `flight_number` (e.g. `DL1634`), `PlaneMarker` shows a "Check delay forecast" button linking to `/flight/<number>/<today>`. It uses React Router, so the click stays inside the app.
 - `services/delay_predictor.py`: `predict_delay(flight)` is called by live lookup. When `app/data/delay_model.joblib` is present it reports `model: "bts-gbm-v1"`: the BTS probability, plus live weather and FAA adjustments only. Otherwise it uses the heuristic (`model: "heuristic-v1"`). A calm weekday evening stays under the 25% medium cutoff; the old flat +0.5 evening bump does not. Demo-mode lookup still serves the fixture's recorded prediction.
@@ -185,7 +187,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `hooks/useFlightLookup.ts` wraps `lookupFlight` with loading/error/ready state and `retry()`. `utils/format.ts` has the time, date and duration formatters.
   - The Search nav tab stays highlighted on `/flight/*`.
   - `AboutPage` has an intro, full feature cards (`<FeatureList variant="cards" />`) and data credits. Model accuracy and methodology are still to come.
-  - `MapPage` shows live aircraft and airports. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. Dark-mode popup headings use a dark, crisp color against Leaflet's white popup. `NotFoundPage` is done.
+  - `MapPage` shows live aircraft and airports. Airport popups load `GET /api/airports/{iata}` on open and show a delay-risk badge, weather, FAA status and top reasons. Tiles are CARTO Voyager (day and aquarium) and CARTO Dark Matter (night), following `data-theme`. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. Dark-mode popup headings use a dark, crisp color against Leaflet's white popup. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
   - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status` and backend `.detail` when available) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
@@ -209,7 +211,6 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 
 **Known gotchas**
 - OpenSky anonymous access is heavily rate-limited. Cache about 15 s and keep bounding boxes small.
-- Existing `api/eco.py` reads `GOOGLE_API_KEY`, while the agreed environment variable is `GOOGLE_TIM_API_KEY`; Role D needs to reconcile this in the eco service.
 
 ---
 
