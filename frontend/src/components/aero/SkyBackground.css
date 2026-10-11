@@ -87,7 +87,12 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  height: clamp(140px, 24vh, 240px);
+  /*
+   * Height follows the width so wide screens don't crop the top of the drawing
+   * (the SVG uses "slice"). At 14vw about 200 of the 240 viewBox units stay visible,
+   * enough for the turbine blade tips (y >= 50). Narrow screens crop the sides instead.
+   */
+  height: clamp(140px, 14vw, 360px);
 }
 
 .skyline__back {

@@ -39,7 +39,13 @@ function makeBuildings(
   return buildings;
 }
 
-const BACK_BUILDINGS = makeBuildings(-20, WIDTH, 40, 90, 70, 175);
+// Turbine hill starts here; keep it clear of buildings so the turbines stand against open sky.
+const HILL_START_X = 1110;
+
+// Generated across the full width (so the seeded layout stays stable), then trimmed before the hill.
+const BACK_BUILDINGS = makeBuildings(-20, WIDTH, 40, 90, 70, 175).filter(
+  (b) => b.x + b.w < HILL_START_X,
+);
 // Front row stops short of the control tower and turbine hill on the right.
 const FRONT_BUILDINGS = makeBuildings(-10, 1000, 50, 105, 40, 125);
 
@@ -124,7 +130,10 @@ function Skyline() {
         ))}
       </g>
 
-      <path className="skyline__hill" d="M1110 240 Q1250 150 1440 168 L1440 240 Z" />
+      <path
+        className="skyline__hill"
+        d={`M${HILL_START_X} 240 Q1250 150 ${WIDTH} 168 L${WIDTH} 240 Z`}
+      />
     </svg>
   );
 }
