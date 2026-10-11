@@ -275,15 +275,16 @@ async def get_emissions(
                 del _inflight[cache_key]
 
 async def get_emissions_for_flight(flight):
-    flight_number = flight.number
-
-    if flight_number.upper().startswith(flight.airline.iata.upper()):
-        flight_number = flight_number[len(flight.airline.iata):]
+    # Flight numbers are a 2-character carrier code plus digits (checked in routes_flights).
+    # Take the carrier from the number, not flight.airline: on regional flights such as
+    # 9E381 the marketing airline (DL) differs from the operating carrier in the number (9E).
+    carrier = flight.number[:2].upper()
+    flight_number = flight.number[2:]
 
     return await get_emissions(
         origin=flight.origin.iata,
         destination=flight.destination.iata,
-        carrier=flight.airline.iata,
+        carrier=carrier,
         flight_number=int(flight_number),
         departure_date=flight.date,
         origin_lat=flight.origin.lat,
