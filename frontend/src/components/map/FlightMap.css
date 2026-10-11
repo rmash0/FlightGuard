@@ -23,6 +23,10 @@
   padding: 7px 12px;
 }
 
+:root[data-theme='dark'] .flight-map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.6);
+}
+
 :root[data-theme='dark'] .flight-map .leaflet-popup-content {
   --aero-heading: var(--aero-map-popup-heading);
   --aero-heading-glow: none;

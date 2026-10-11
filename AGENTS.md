@@ -85,7 +85,7 @@ Everyone works solo on their own branch. These rules keep the pieces fitting tog
    - **A:** `App.tsx`, `main.tsx`, `index.css`, `components/Layout.tsx`, `components/aero/*`, `components/search/*`, `components/results/*`, `pages/SearchPage`, `pages/ResultsPage`, `pages/AboutPage`, `pages/NotFoundPage`, `api/client.ts`, `frontend/package.json`.
    - **B:** `backend/app/main.py`, `models/schemas.py`, `clients/aerodatabox_client.py`, `services/flight_lookup.py`, `services/cache.py`, `services/demo_fixtures.py`, `api/routes_flights.py`, `backend/pyproject.toml`, `backend/.env.example`.
    - **C:** `services/delay_predictor.py`, `clients/open_meteo_client.py`, `clients/faa_status_client.py`, `api/routes_predict.py`, `api/routes_airports.py`, `backend/ml/*`.
-   - **D:** `services/emissions.py`, `clients/google_tim_client.py`, `clients/opensky_client.py`, `api/routes_eco.py`, `data/eco_constants.py`, `data/airports.json`, `components/eco/*`, `components/map/*`, `pages/MapPage`.
+   - **D:** `services/emissions.py`, `clients/google_tim_client.py`, `clients/opensky_client.py`, `api/routes_eco.py`, `data/eco_constants.py`, `data/airports.json`, `api/routes_airport_list.py`, `services/airport_directory.py`, `components/eco/*`, `components/map/*`, `pages/MapPage`, `mocks/airport-status.json`.
    - **Shared, small edits OK (keep them minimal):** `AGENTS.md`, `types/api.ts`, `mocks/*`.
    - If you need a change in someone else's file, ask them or keep the PR tiny and tag them.
 4. **Use placeholder versions of cross-owner components.** A creates placeholder versions of `EmissionsCard` (props: `{ emissions: Emissions | null }`) and `MapPage`, so pages can include them from day one. D replaces the insides **without changing the props**. Backend routes do the same: register the route early with a placeholder response that matches the schema, then fill it in.
@@ -110,7 +110,7 @@ Everyone works solo on their own branch. These rules keep the pieces fitting tog
 | Layer | Tech | Notes |
 |---|---|---|
 | Frontend | React 19 + TypeScript 6 + Vite 8 | `frontend/` |
-| Map | Leaflet 1.9 + react-leaflet 5 | installed, not used yet |
+| Map | Leaflet 1.9 + react-leaflet 5 | used by the Map tab |
 | Charts | Recharts 3 | installed, not used yet. Use for delay/CO2 visuals |
 | Lint | oxlint | `npm run lint` |
 | Backend | Python ≥ 3.14 + FastAPI | `backend/`, managed with **uv** |
@@ -188,15 +188,16 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `hooks/useFlightLookup.ts` wraps `lookupFlight` with loading/error/ready state and `retry()`. `utils/format.ts` has the time, date and duration formatters.
   - The Search nav tab stays highlighted on `/flight/*`.
   - `AboutPage` has an intro, full feature cards (`<FeatureList variant="cards" />`) and data credits. Model accuracy and methodology are still to come.
-  - `MapPage` shows live aircraft and airports. Airport popups load `GET /api/airports/{iata}` on open and show a delay-risk badge, weather, FAA status and top reasons. Tiles are CARTO Voyager (day and aquarium) and CARTO Dark Matter (night), following `data-theme`. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. Dark-mode popup headings use a dark, crisp color against Leaflet's white popup. `NotFoundPage` is done.
+  - `MapPage` shows live aircraft and airports. Airport popups load `GET /api/airports/{iata}` on open and show a delay-risk badge, weather, FAA status and top reasons. Tiles are keyless OpenStreetMap; night mode darkens them with a CSS filter on `.leaflet-tile-pane` in `FlightMap.css`. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. Dark-mode popup headings use a dark, crisp color against Leaflet's white popup. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
-  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status` and backend `.detail` when available) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, `getLiveFlightDetails`, `getMapAirports` and `getAirportStatus`, plus `ApiError` (with `.status` and backend `.detail` when available) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
   - **Mock test flights** (mocks only):
     - `ZZ404`, `ZZ502`, `ZZ503` return those errors.
     - `ZZ1` has `null` prediction and emissions.
     - `ZZ2` is a delayed, high-risk flight.
     - Any other number returns the sample flight.
+  - In mock mode the map gets no aircraft or airports, and `getAirportStatus` returns `mocks/airport-status.json`.
   - Mocks vs real backend:
     - With mocks off and the backend in `DEMO_MODE=true`, only `DL1234` on `2026-10-11` exists. Everything else returns 404.
     - `.env.local` overrides `.env.example`, so to test against the real backend, set `VITE_USE_MOCKS=false` there (or prefix the command) and restart Vite.
@@ -211,7 +212,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` has its own themed panels and map overlays.
 
 **Known gotchas**
-- OpenSky anonymous access is heavily rate-limited. Cache about 15 s and keep bounding boxes small.
+- OpenSky anonymous access is heavily rate-limited, so set the OAuth credentials for the demo. The backend caches each bounding box for 60 s (rounded to 0.5°) and rejects boxes over 100 square degrees; the map asks the user to zoom in until the view is small enough.
 
 ---
 
@@ -255,11 +256,11 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 - Always label values as **estimates** and credit "Google Travel Impact Model".
 
 ### 6.4 Map Tab (secondary)
-- Leaflet map with live aircraft from OpenSky (anonymous), filtered to the viewport within the US. Markers are rotated by heading. Poll about every 15 s via the backend cache.
+- Leaflet map with live aircraft from OpenSky (OAuth when configured, otherwise anonymous), filtered to the viewport within the US. Markers are rotated by heading. The frontend polls every 15 s; the backend serves from its 60 s cache.
 - Airports from the free **OurAirports** dataset, filtered to US `large_airport` / `medium_airport`, stored as a trimmed JSON in `backend/app/data/airports.json`.
 - Click an airport → its weather + FAA status + delay risk (reuses prediction services).
 - Stretch: highlight the searched flight's route as a great-circle arc. If its `icao24` is known, show the live plane.
-- Tiles: light, airy (e.g. CARTO Voyager/Positron with attribution). Dark mode uses a dark tile variant.
+- Tiles: OpenStreetMap standard (no key). Dark mode applies a CSS invert filter to the tile layer. CARTO basemaps were tried and rejected: they now require an API key and render "API KEY REQUIRED" watermarks.
 
 ---
 
@@ -349,10 +350,10 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 | GET | `/api/flights/lookup?number=DL1234&date=2026-10-11` | Backend | `FlightLookupResponse` (below): the main search call |
 | GET | `/api/predict?number=...&date=...` | Prediction | `DelayPrediction` |
 | GET | `/api/predict/model` | Prediction | `ModelInfo` (AUC, months, hourly delay rates) |
-| GET | `/api/eco/emissions?carrier=DL&number=1234&origin=RDU&destination=ATL&date=...` | Eco | `Emissions` |
+| GET | `/api/eco/emissions?carrier=DL&number=1234&origin=RDU&destination=ATL&date=...` | Eco | `Emissions`. Optional `origin_lat`, `origin_lon`, `destination_lat`, `destination_lon`; otherwise looked up in `airports.json`. 503 when no estimate is possible |
 | GET | `/api/flights/live?lamin&lamax&lomin&lomax` | Eco/Map | live aircraft (cached) |
 | GET | `/api/flights/live/{icao24}/details?callsign=DAL214` | Eco/Map | `LiveFlightDetails` (below), fetched on popup open |
-| GET | `/api/airports` | Eco/Map | trimmed US airport list |
+| GET | `/api/airports` | Eco/Map | US airport list: `[{ iata, name, lat, lon, type }]`, `type` is `large_airport \| medium_airport` |
 | GET | `/api/airports/{iata}` | Prediction | weather + FAA status + risk |
 
 `/api/flights/lookup` calls the flight client and then the prediction and emissions services. The frontend makes **one call** for the results page.
@@ -451,10 +452,12 @@ Served by Role C. Lookup models are in `models/schemas.py`. The airport-status m
 ```
 backend/app/
   main.py
-  api/       routes_flights.py, routes_predict.py, routes_eco.py, routes_airports.py
+  api/       routes_flights.py, routes_predict.py, routes_eco.py, routes_airports.py,
+             routes_airport_list.py, routes_live.py
   clients/   aerodatabox_client.py, google_tim_client.py, open_meteo_client.py,
              faa_status_client.py, opensky_client.py      # thin wrappers, no logic
-  services/  flight_lookup.py, delay_predictor.py, emissions.py, cache.py, demo_fixtures.py
+  services/  flight_lookup.py, delay_predictor.py, emissions.py, cache.py, demo_fixtures.py,
+             airport_directory.py, live_flight_details.py
   models/    schemas.py                                   # Pydantic models for the contract above
   data/      airports.json, delay_model.joblib, eco_constants.py, fixtures/
 backend/ml/  train.py, data/ (gitignored)
