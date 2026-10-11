@@ -37,7 +37,7 @@ Frutiger Aero (the Windows Vista/7, early-2000s "nature + technology" look) fits
 | OpenSky account | None yet. Map uses anonymous access with caching. |
 | Deployment | **Localhost** for the demo. Hosted only if there's spare time. |
 | Git workflow | **Feature branches + PRs** to `main`. |
-| Mobile | Low priority. Desktop first; responsive only if time allows. |
+| Mobile | Phone search is now part of the main flow. Keep search, results, navigation, and map usable at 320–412px widths. |
 | Dark mode | **Yes:** an Aero "night sky / aurora" mode. |
 
 ---
@@ -192,7 +192,8 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - It renders **its own** `GlassPanel` and "Carbon Footprint" heading, including the `null` state. `ResultsPage` places it straight into the results grid without wrapping it.
 - `config.ts` holds `APP_NAME`. `<title>` is "FlightGuard".
 - **Aero theme:** done. Tokens for light and dark are in `index.css`, the shared components are in `components/aero/`, and the glass nav bar, sky background (bubbles, city skyline with control tower and wind turbines, stars and a full moon at night), theme toggle and Aero favicon are in place. Page content is centered. See §7 "Using the theme".
-- `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` (Role D) is still unstyled.
+- Mobile layout uses a two-row header with 44px nav and theme controls, narrower panel spacing, full-width search actions, wrapped airport names and popups, and a shorter map. Touch devices use a scrolling page background and extra scroll margin for focused inputs. The date field uses `AeroDateInput`, which constrains the native picker inside the same width as the flight-number field.
+- `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` has its own themed panels and map overlays.
 
 **Known gotchas**
 - OpenSky anonymous access is heavily rate-limited. Cache about 15 s and keep bounding boxes small.
@@ -286,7 +287,8 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 **Components** (`components/aero/`)
 - `<GlassPanel as="section" className="...">`: frosted card, the base for every panel. `as` can be `div` (default), `section`, `article`, `aside`, `header` or `footer`. Accepts all div props. Adjacent panels get a 20px gap automatically.
 - `<AeroButton variant="primary|eco|glass" size="md|lg">`: glossy gel button with all normal button props. `type` defaults to `"button"`. Use `eco` (green) for eco actions.
-- `<AeroInput>`: glassy pill input (text, date, etc.) that takes all normal input props. Set `aria-invalid={true}` to show the coral error border. Pair it with a `<label htmlFor>`.
+- `<AeroInput>`: glassy pill text input that takes all normal input props. Set `aria-invalid={true}` to show the coral error border. Pair it with a `<label htmlFor>`.
+- `<AeroDateInput>`: glassy date field with a constrained native date picker. It takes normal date input props, including `aria-invalid`, and also needs a `<label htmlFor>`.
 - `aeroButtonClass(variant?, size?, className?)` from `components/aero/classes.ts`: use this to style a **link** as an Aero button, e.g. `<Link className={aeroButtonClass("primary", "lg")}>`. `cx(...)` from the same file joins class names.
 - `<SkyBackground />` and `<ThemeToggle />` are already rendered by `Layout`. Don't add them again.
   - `SkyBackground` is the fixed decorative scene behind everything: stars, the full moon (night only), `Skyline` (SVG city, control tower and wind turbines along the bottom) and rising bubbles.
