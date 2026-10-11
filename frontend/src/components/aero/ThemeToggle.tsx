@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import "./OrbButton.css";
 import "./ThemeToggle.css";
 
 // Clicking the toggle cycles through themes in this order.
@@ -67,7 +68,7 @@ function ThemeToggle() {
   return (
     <button
       type="button"
-      className="theme-toggle"
+      className="orb-button theme-toggle"
       onClick={handleClick}
       aria-label={label}
       title={label}

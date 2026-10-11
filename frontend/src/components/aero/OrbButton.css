@@ -1,0 +1,47 @@
+/* Round glossy icon button used in the header (theme toggle, music toggle). */
+.orb-button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--aero-glass-border);
+  border-radius: 50%;
+  color: var(--aero-accent-strong);
+  cursor: pointer;
+  background-image:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(180deg, var(--aero-glass-strong), var(--aero-glass-bg));
+  background-origin: border-box;
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 var(--aero-glass-inner);
+  transition: transform 0.2s ease;
+}
+
+:root[data-theme='dark'] .orb-button {
+  color: #cfe8ff;
+  background-image:
+    radial-gradient(circle at 35% 25%, rgba(170, 220, 255, 0.35), rgba(170, 220, 255, 0) 55%),
+    linear-gradient(180deg, var(--aero-glass-strong), var(--aero-glass-bg));
+}
+
+.orb-button:hover {
+  transform: scale(1.06);
+}
+
+.orb-button:focus-visible {
+  border-radius: 50%;
+}
+
+.orb-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-button {
+    transition: none;
+  }
+}

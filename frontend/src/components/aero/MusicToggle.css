@@ -1,0 +1,21 @@
+/* Base look comes from OrbButton.css. */
+
+.music-toggle.is-playing {
+  color: var(--aero-leaf);
+  animation: music-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes music-glow {
+  50% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--aero-leaf), transparent 65%),
+      0 3px 14px color-mix(in srgb, var(--aero-leaf), transparent 50%),
+      inset 0 1px 0 var(--aero-glass-inner);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-toggle.is-playing {
+    animation: none;
+  }
+}

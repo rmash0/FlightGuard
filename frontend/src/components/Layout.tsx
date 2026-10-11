@@ -2,6 +2,7 @@ import { NavLink, Outlet, useMatch } from "react-router";
 
 import { APP_NAME } from "../config";
 import GlassPanel from "./aero/GlassPanel";
+import MusicToggle from "./aero/MusicToggle";
 import SkyBackground from "./aero/SkyBackground";
 import ThemeToggle from "./aero/ThemeToggle";
 import "./Layout.css";
@@ -32,6 +33,7 @@ function Layout() {
             <NavLink to="/map">Map</NavLink>
             <NavLink to="/about">About</NavLink>
           </nav>
+          <MusicToggle />
           <ThemeToggle />
         </div>
       </GlassPanel>
