@@ -3,7 +3,8 @@
 
 import lookupMock from "../mocks/lookup.json";
 import liveDetailsMock from "../mocks/live-details.json";
-import type { FlightLookupResponse, LiveFlightDetails } from "../types/api";
+import airportStatusMock from "../mocks/airport-status.json";
+import type { AirportStatus, FlightLookupResponse, LiveFlightDetails } from "../types/api";
 import type { LiveAircraft } from "../components/map/PlaneMarker";
 import type { MapAirport } from "../components/map/AirportMarker";
 
@@ -172,4 +173,16 @@ export async function getMapAirports(
   );
 
   return Array.isArray(data) ? data : data.airports;
+}
+
+export async function getAirportStatus(
+  iata: string,
+  signal?: AbortSignal,
+): Promise<AirportStatus> {
+  if (USE_MOCKS) {
+    await mockDelay(signal);
+    return { ...(airportStatusMock as AirportStatus), iata };
+  }
+
+  return getJson<AirportStatus>(`/api/airports/${encodeURIComponent(iata)}`, signal);
 }

@@ -108,6 +108,7 @@ function FlightMap({
           height: "100%",
         }}
       >
+        {/* Keyless OSM tiles; night mode darkens them with a CSS filter in FlightMap.css. */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
