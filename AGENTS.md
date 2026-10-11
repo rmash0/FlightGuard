@@ -34,7 +34,7 @@ Frutiger Aero (the Windows Vista/7, early-2000s "nature + technology" look) fits
 | Flight data API | **AeroDataBox** via RapidAPI (see §6.1). Pro tier is subscribed; the key is kept in the local `backend/.env`. |
 | Delay prediction | Heuristic first, then **train a model on BTS data if time permits**. |
 | CO2 source | **Google Travel Impact Model (TIM) API.** |
-| OpenSky account | None yet. Map uses anonymous access with caching. |
+| OpenSky account | OAuth API client credentials in local `backend/.env`; the map uses authenticated access when both are set. |
 | Deployment | **Localhost** for the demo. Hosted only if there's spare time. |
 | Git workflow | **Feature branches + PRs** to `main`. |
 | Mobile | Phone search is now part of the main flow. Keep search, results, navigation, and map usable at 320–412px widths. |
@@ -137,7 +137,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 | `AERODATABOX_API_KEY` | RapidAPI key for AeroDataBox (flight search) |
 | `GOOGLE_TIM_API_KEY` | Google Cloud key with the Travel Impact Model API enabled |
 | `OPEN_METEO_BASE_URL` | already in `.env.example` |
-| `OPENSKY_*` | already in `.env.example`. Unused until we get an account |
+| `OPENSKY_CLIENT_ID`, `OPENSKY_CLIENT_SECRET` | OpenSky OAuth API client for authenticated live map requests; leave both empty for anonymous access |
 | `DEMO_MODE` | `true` = serve an offline fixture instead of calling APIs |
 
 ---
@@ -154,6 +154,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `GET /api/flights/live` serves OpenSky aircraft within the map viewport from a 60-second backend cache.
 - `GET /api/airports` (Role D, `api/routes_airport_list.py`) returns the 873 US large/medium airports from `data/airports.json` (`iata`, `name`, `lat`, `lon`, `type`) with a one-day `Cache-Control`. `services/airport_directory.py` loads the file as UTF-8 and offers `find_airport(iata)`.
 - `GET /api/eco/emissions` fills missing coordinates from `airports.json`, so the contract call (no lat/lon) still gets the distance estimate when Google TIM has nothing. The TIM cascade (flight → route → distance) is cached for an hour per flight.
+- `clients/opensky_client.py` obtains an OAuth access token from the API client credentials in `backend/.env`, reuses it until shortly before expiry, and refreshes it once after a 401. The live map falls back to anonymous access when both credentials are absent.
 - `GET /api/flights/live/{icao24}/details` looks up flight number and origin/destination via AeroDataBox only when a plane popup opens. Results, including unavailable matches, are cached for 10 minutes per aircraft and callsign; an unconfirmed route is never guessed.
   - Frontend: once a popup has an IATA `flight_number` (e.g. `DL1634`), `PlaneMarker` shows a "Check delay forecast" button linking to `/flight/<number>/<today>`. It uses React Router, so the click stays inside the app.
 - `services/delay_predictor.py`: `predict_delay(flight)` is called by live lookup. When `app/data/delay_model.joblib` is present it reports `model: "bts-gbm-v1"`: the BTS probability, plus live weather and FAA adjustments only. Otherwise it uses the heuristic (`model: "heuristic-v1"`). A calm weekday evening stays under the 25% medium cutoff; the old flat +0.5 evening bump does not. Demo-mode lookup still serves the fixture's recorded prediction.

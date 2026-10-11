@@ -77,6 +77,13 @@ async def live_aircraft(
                     "detail": "OpenSky rate limit reached",
                 }
 
+            if status == 401:
+                logger.warning("OpenSky API client authentication failed")
+                return {
+                    "error": "upstream",
+                    "detail": "OpenSky API client authentication failed",
+                }
+
             logger.warning("OpenSky returned HTTP %s", status)
             return {
                 "error": "upstream",
