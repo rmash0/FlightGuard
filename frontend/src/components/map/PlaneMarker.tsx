@@ -57,9 +57,15 @@ function PlaneMarker({ aircraft }: PlaneMarkerProps) {
     detailsLoading ? "Looking up..." : value || "Unavailable";
 
   // Link to the delay forecast once we know the IATA flight number (e.g. DL214).
-  const forecastFlightNumber = details?.flight_number
+  // Airliners broadcast an ICAO callsign (UAL1788) that differs from their IATA number (UA1788);
+  // private planes report their tail number (N12669) as both, which the lookup rejects.
+  const parsedFlightNumber = details?.flight_number
     ? normalizeFlightNumber(details.flight_number)
     : null;
+  const forecastFlightNumber =
+    parsedFlightNumber && parsedFlightNumber !== aircraft.callsign.trim().toUpperCase()
+      ? parsedFlightNumber
+      : null;
 
   const icon = useMemo(() => {
     const heading = aircraft.heading ?? 0;
