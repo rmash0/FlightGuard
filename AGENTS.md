@@ -174,7 +174,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
     - `FlightSummary`: route card with airport-local times, duration, a status badge, and the scheduled time struck through when the airline posts a new one.
     - The "Delay forecast" panel: `DelayGauge` (half-circle dial, risk badge, estimated minutes, reported-delay note) plus `ReasonList` (high impact first).
     - Role D's `EmissionsCard`, which brings its own panel, next to the delay forecast.
-    - A loading orb, and a friendly message for each API error (404, 422, 502, 503, network). "Try again" only appears for 502 and network errors.
+    - A loading orb, and a friendly message for each API error (404, 422, 502, 503, network). For 422, backend detail distinguishes unsupported airlines and routes from malformed flight numbers. "Try again" only appears for 502 and network errors.
     - Empty-state copy when `prediction` or `emissions` is `null`.
     - Messy URLs (`/flight/dl-1234/...`) redirect to the clean form. Invalid flight numbers or dates in the URL show a message without calling the API.
   - `hooks/useFlightLookup.ts` wraps `lookupFlight` with loading/error/ready state and `retry()`. `utils/format.ts` has the time, date and duration formatters.
@@ -183,7 +183,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `MapPage` shows live aircraft and airports. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
-  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status`) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status` and backend `.detail` when available) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
   - **Mock test flights** (mocks only):
     - `ZZ404`, `ZZ502`, `ZZ503` return those errors.
     - `ZZ1` has `null` prediction and emissions.
