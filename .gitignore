@@ -27,6 +27,3 @@ Thumbs.db
 
 # BTS on-time CSVs downloaded by backend/ml/train.py
 backend/ml/data/
-
-# Local background music track (may be copyrighted; never commit it)
-frontend/public/audio/bgm.*

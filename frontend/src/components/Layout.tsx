@@ -2,7 +2,6 @@ import { NavLink, Outlet, useMatch } from "react-router";
 
 import { APP_NAME } from "../config";
 import GlassPanel from "./aero/GlassPanel";
-import MusicToggle from "./aero/MusicToggle";
 import SkyBackground from "./aero/SkyBackground";
 import ThemeToggle from "./aero/ThemeToggle";
 import "./Layout.css";
@@ -33,7 +32,6 @@ function Layout() {
           <NavLink to="/about">About</NavLink>
         </nav>
         <div className="app-header__toggles">
-          <MusicToggle />
           <ThemeToggle />
         </div>
       </GlassPanel>
