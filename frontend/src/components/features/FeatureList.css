@@ -53,6 +53,18 @@
   height: 20px;
 }
 
+.feature-list__link {
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.feature-list__link:hover {
+  transform: translateY(-2px);
+  background-color: var(--aero-glass-strong);
+}
+
 .feature-list__title {
   color: var(--aero-heading);
   font-size: 0.95rem;
@@ -90,6 +102,35 @@
 
 .feature-list--cards p {
   font-size: 0.95rem;
+}
+
+/* Glow when arriving from a search-page pill */
+.feature-list--cards .glass-panel.feature-list__item {
+  scroll-margin-top: 120px;
+}
+
+.feature-list--cards .is-highlighted {
+  animation: feature-glow 1.6s ease-out 2;
+}
+
+@keyframes feature-glow {
+  0%,
+  100% {
+    box-shadow: var(--aero-shadow);
+  }
+  40% {
+    box-shadow:
+      0 0 0 3px var(--aero-accent),
+      0 0 28px var(--aero-gel-primary-glow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-list__link,
+  .feature-list--cards .is-highlighted {
+    transition: none;
+    animation: none;
+  }
 }
 
 @media (max-width: 760px) {

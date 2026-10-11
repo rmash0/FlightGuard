@@ -17,6 +17,7 @@ from app.data.eco_constants import (
     CAR_CO2_KG_PER_KM,
     TREE_CO2_KG_PER_YEAR,
     PERSON_CO2_KG_PER_DAY,
+    SMARTPHONE_CHARGE_CO2_KG,
     CABIN_MULTIPLIERS,
 )
 
@@ -102,6 +103,10 @@ def calculate_comparisons(co2_kg):
         EcoComparison(
             label="urban tree seedlings absorbing CO2 (annualized over 10 years)",
             value=round(co2_kg / TREE_CO2_KG_PER_YEAR, 1),
+        ),
+        EcoComparison(
+            label="smartphones fully charged",
+            value=round(co2_kg / SMARTPHONE_CHARGE_CO2_KG),
         ),
     ]
 

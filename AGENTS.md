@@ -37,7 +37,7 @@ Frutiger Aero (the Windows Vista/7, early-2000s "nature + technology" look) fits
 | OpenSky account | None yet. Map uses anonymous access with caching. |
 | Deployment | **Localhost** for the demo. Hosted only if there's spare time. |
 | Git workflow | **Feature branches + PRs** to `main`. |
-| Mobile | Low priority. Desktop first; responsive only if time allows. |
+| Mobile | Phone search is now part of the main flow. Keep search, results, navigation, and map usable at 320–412px widths. |
 | Dark mode | **Yes:** an Aero "night sky / aurora" mode. |
 
 ---
@@ -153,6 +153,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `services/cache.py` provides an in-process async TTL cache with one in-flight fetch per key. Each backend process has its own cache.
 - `GET /api/flights/live` serves OpenSky aircraft within the map viewport from a 60-second backend cache.
 - `GET /api/flights/live/{icao24}/details` looks up flight number and origin/destination via AeroDataBox only when a plane popup opens. Results, including unavailable matches, are cached for 10 minutes per aircraft and callsign; an unconfirmed route is never guessed.
+  - Frontend: once a popup has an IATA `flight_number` (e.g. `DL1634`), `PlaneMarker` shows a "Check delay forecast" button linking to `/flight/<number>/<today>`. It uses React Router, so the click stays inside the app.
 - `services/delay_predictor.py`: `predict_delay(flight)` is called by live lookup. When `app/data/delay_model.joblib` is present it reports `model: "bts-gbm-v1"`: the BTS probability, plus live weather and FAA adjustments only. Otherwise it uses the heuristic (`model: "heuristic-v1"`). A calm weekday evening stays under the 25% medium cutoff; the old flat +0.5 evening bump does not. Demo-mode lookup still serves the fixture's recorded prediction.
 - `api/routes_predict.py`: `GET /api/predict?number=&date=` resolves the flight through `lookup_flight`, then returns `predict_delay`'s `DelayPrediction`. If lookup has no data (no API key, or no demo fixture for that date), `DL1234` still resolves from a sample schedule. `GET /api/predict/model` returns `ModelInfo` (held-out AUC, months, and `hourly_delay_rate` for a chart).
 - `backend/ml/train.py` trains `HistGradientBoostingClassifier` on BTS on-time zips in `backend/ml/data/` (gitignored) and writes `delay_model.joblib`, `model_meta.json`, and `route_stats.json`.
@@ -165,6 +166,8 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - **Routing:** React Router v8 is set up in `main.tsx` (`BrowserRouter`) and `App.tsx`. Every route from §8 exists, inside `components/Layout.tsx` (header + nav + `<Outlet />`).
 - **Pages:**
   - `SearchPage` is done: a hero panel with `FlightSearchForm` and a compact row of feature pills (`<FeatureList variant="compact" />`). It's kept light so the skyline stays visible.
+    - The pills are links: "Delay forecast" goes to `/about#delay-forecast`, "Carbon footprint" to `/about#carbon-footprint`, and "Live map" to `/map`.
+    - `AboutPage` scrolls to the `#anchor` and briefly glows that card.
   - The form validates the flight number and date with inline errors and navigates to `/flight/:number/:date`.
   - Parsing lives in `utils/flightSearch.ts`:
     - `normalizeFlightNumber` accepts `dl 1234`, `DL-1234` and `B6 623`, and returns uppercase with no spaces, or `null`.
@@ -173,8 +176,9 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `ResultsPage` is done:
     - A compact search bar at the top, prefilled from the URL.
     - `FlightSummary`: route card with airport-local times, duration, a status badge, and the scheduled time struck through when the airline posts a new one.
-    - The "Delay forecast" panel: `DelayGauge` (half-circle dial, risk badge, estimated minutes, reported-delay note) plus `ReasonList` (high impact first).
-    - Role D's `EmissionsCard`, which brings its own panel, next to the delay forecast.
+    - **Layout:** stacked full-width sections, each split into two equal halves that stack below roughly 760–800px. Headings are centered and in sentence case.
+    - "Delay forecast" section: `DelayGauge` (half-circle dial, risk badge, estimated minutes, reported-delay note) on the left, and the "Why" `ReasonList` (high impact first) on the right.
+    - "Carbon footprint" section (Role D's `EmissionsCard`): the big kg number and 2×2 cabin buttons on the left, the 2×2 `EcoComparison` equivalents on the right, and the source note across the bottom.
     - A loading orb, and a friendly message for each API error (404, 422, 502, 503, network). "Try again" only appears for 502 and network errors.
     - Empty-state copy when `prediction` or `emissions` is `null`.
     - Messy URLs (`/flight/dl-1234/...`) redirect to the clean form. Invalid flight numbers or dates in the URL show a message without calling the API.
@@ -184,7 +188,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `MapPage` shows live aircraft and airports. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
-  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status`) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status` and backend `.detail` when available) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
   - **Mock test flights** (mocks only):
     - `ZZ404`, `ZZ502`, `ZZ503` return those errors.
     - `ZZ1` has `null` prediction and emissions.
@@ -196,10 +200,12 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `types/api.ts` mirrors the §8 contract, and `mocks/lookup.json` is a sample response.
 - **Vite dev proxy:** `/api` → `http://127.0.0.1:8000`, so the frontend uses relative URLs only and CORS isn't involved in dev.
 - `components/eco/EmissionsCard.tsx` (Role D) is built: cabin-class picker, kg CO2e per passenger, estimate tier, `EcoComparison`, and the source note. Props: `{ emissions: Emissions | null }`.
-  - It renders **its own** `GlassPanel` and "Carbon Footprint" heading, including the `null` state. `ResultsPage` places it straight into the results grid without wrapping it.
+  - Environmental equivalents (backend `calculate_comparisons`): km in a gas car, days of an average American's emissions, urban tree seedlings, and smartphones fully charged (EPA, 0.0124 kg CO2 per charge). Four boxes keep the card's 2×2 grid even. `EcoComparison` picks icons by label keyword.
+  - It renders **its own** full-width `GlassPanel` with a centered "Carbon footprint" heading, including the `null` state. `ResultsPage` stacks it under the delay section without wrapping it.
 - `config.ts` holds `APP_NAME`. `<title>` is "FlightGuard".
 - **Aero theme:** done. Tokens for light and dark are in `index.css`, the shared components are in `components/aero/`, and the glass nav bar, sky background (bubbles, city skyline with control tower and wind turbines, stars and a full moon at night), theme toggle and Aero favicon are in place. Page content is centered. See §7 "Using the theme".
-- `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` (Role D) is still unstyled.
+- Mobile layout uses a two-row header with 44px nav and theme controls, narrower panel spacing, full-width search actions, wrapped airport names and popups, and a shorter map. Touch devices use a scrolling page background and extra scroll margin for focused inputs. The date field uses `AeroDateInput`, which constrains the native picker inside the same width as the flight-number field.
+- `SearchPage`, `ResultsPage`, `AboutPage` and `NotFoundPage` are wrapped in `GlassPanel`. `MapPage` has its own themed panels and map overlays.
 
 **Known gotchas**
 - OpenSky anonymous access is heavily rate-limited. Cache about 15 s and keep bounding boxes small.
@@ -274,7 +280,12 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 
 ### Using the theme (built, in `frontend/src`)
 **How theming works**
-- The theme lives on `<html data-theme="light|dark">`. An inline script in `index.html` sets it before first paint, from `localStorage["theme"]` or the OS setting. `ThemeToggle` switches it and saves the choice.
+- There are **three themes**: `light` (day sky), `dark` (night sky with aurora and moon) and `aquarium` (bright turquoise Frutiger Aero water, with tropical fish, light rays, bokeh and a colorful reef).
+- The theme lives on `<html data-theme="light|dark|aquarium">`.
+  - An inline script in `index.html` sets it before first paint: from `?theme=...` in the URL, then `localStorage["theme"]`, then the OS light/dark setting.
+  - `ThemeToggle` cycles day → night → aquarium (sun → moon → fish icon) and saves the choice.
+- `?theme=aquarium` (or `light`/`dark`) on any URL selects and saves that theme. Use it for demo links and screenshots.
+- To add a theme: add a `:root[data-theme='x']` token block in `index.css`, add it to `THEMES` in `ThemeToggle.tsx` and to the list in `index.html`, and add an icon.
 - Styling for dark mode means **overriding tokens** under `:root[data-theme='dark']` (or `:root[data-theme='dark'] .your-class`). Never use `@media (prefers-color-scheme)` in components.
 
 **Tokens** (`index.css`, always `var(--aero-*)`)
@@ -291,18 +302,35 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 | Gel | `--aero-gel-primary-*`, `--aero-gel-eco-*` (`-top`, `-bottom`, `-border`, `-glow`) |
 
 **Components** (`components/aero/`)
-- `<GlassPanel as="section" className="...">`: frosted card, the base for every panel. `as` can be `div` (default), `section`, `article`, `aside`, `header` or `footer`. Accepts all div props. Adjacent panels get a 20px gap automatically.
+- `<GlassPanel as="section" className="...">`: frosted card, the base for every panel. `as` can be `div` (default), `section`, `article`, `aside`, `header` or `footer`. Accepts all div props.
+  - Panels stacked **directly** inside `<main>` (page-level siblings) get a 20px gap automatically.
+  - Panels inside your own grid or flex wrapper get no automatic margin. Space them with `gap`.
+  - `.app-main` centers text, and every page follows that, including `MapPage`. If a section genuinely reads better left-aligned (long lists, tables), set `textAlign: "left"` on just that section.
 - `<AeroButton variant="primary|eco|glass" size="md|lg">`: glossy gel button with all normal button props. `type` defaults to `"button"`. Use `eco` (green) for eco actions.
-- `<AeroInput>`: glassy pill input (text, date, etc.) that takes all normal input props. Set `aria-invalid={true}` to show the coral error border. Pair it with a `<label htmlFor>`.
+- `<AeroInput>`: glassy pill text input that takes all normal input props. Set `aria-invalid={true}` to show the coral error border. Pair it with a `<label htmlFor>`.
+- `<AeroDateInput>`: glassy date field with a constrained native date picker. It takes normal date input props, including `aria-invalid`, and also needs a `<label htmlFor>`.
 - `aeroButtonClass(variant?, size?, className?)` from `components/aero/classes.ts`: use this to style a **link** as an Aero button, e.g. `<Link className={aeroButtonClass("primary", "lg")}>`. `cx(...)` from the same file joins class names.
 - `<SkyBackground />` and `<ThemeToggle />` are already rendered by `Layout`. Don't add them again.
-  - `SkyBackground` is the fixed decorative scene behind everything: stars, the full moon (night only), `Skyline` (SVG city, control tower and wind turbines along the bottom) and rising bubbles.
-  - Its colors come from the `--aero-skyline-*`, `--aero-moon-opacity`, `--aero-beacon-opacity`, `--aero-stars-opacity` and `--aero-bubble-opacity` tokens.
+  - `SkyBackground` is the fixed decorative scene behind everything:
+    - stars and the full moon (night only),
+    - sunlight rays (aquarium only),
+    - `Skyline`: SVG city, control tower and wind turbines along the bottom (day and night),
+    - `SeaLife`: swimming fish, and `Seabed`: sand, swaying seaweed, coral and a starfish (aquarium only),
+    - rising bubbles in every theme.
+  - Which scene shows is switched in `SkyBackground.css` with `:root[data-theme='aquarium']` display rules.
+  - Colors come from the `--aero-skyline-*`, `--aero-moon-opacity`, `--aero-beacon-opacity`, `--aero-stars-opacity`, `--aero-rays-opacity`, `--aero-bokeh-opacity` (colored light spots, aquarium only) and `--aero-bubble-opacity` tokens.
 - `.app-main` centers text (`text-align: center`). Set `text-align: left` on anything that reads better left-aligned, such as lists, tables and long paragraphs.
 - `<AeroBadge tone="sky|aqua|leaf|amber|coral|muted">`: small glossy pill for statuses, delay risk, an eco score and so on. Amber uses dark text for contrast.
 - Utility classes: `.text-muted`, and `.visually-hidden` (hidden on screen, still read by screen readers).
+- `.orb-button` (`OrbButton.css`) is the round glossy header button style shared by `ThemeToggle` and `MusicToggle`.
+
+**Background music** (`MusicToggle`, the note orb in the header)
+- Plays `frontend/public/audio/bgm.mp3` on a loop at a soft volume (25%) with fade in/out. It's off by default and remembers the choice in `localStorage["music"]`. Browsers block autoplay, so a saved "on" resumes at the visitor's first click or key press.
+- The file is **gitignored on purpose** (`frontend/public/audio/bgm.*`). The track the team wants (Wii U Mii Maker) is copyrighted Nintendo music, so each person drops their own copy in locally and it never gets pushed. For anything public (deployed site, demo video), use a royalty-free track instead.
+- With no file, the button shows as disabled ("Background music file not found").
 
 **Gotchas**
+- The sticky header uses `z-index: 2000` so Leaflet's map controls and overlays (up to ~1000) never cover it when scrolling. Keep new overlays below that.
 - When writing `backdrop-filter` with a `-webkit-` prefix, put the **prefixed line first**. The build minifier keeps only the last of the pair, and Chrome/Edge ignore the prefixed version. Dev mode won't show the problem.
 - Respect `prefers-reduced-motion` for any animation.
 

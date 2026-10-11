@@ -2,6 +2,7 @@ import { NavLink, Outlet, useMatch } from "react-router";
 
 import { APP_NAME } from "../config";
 import GlassPanel from "./aero/GlassPanel";
+import MusicToggle from "./aero/MusicToggle";
 import SkyBackground from "./aero/SkyBackground";
 import ThemeToggle from "./aero/ThemeToggle";
 import "./Layout.css";
@@ -20,18 +21,19 @@ function Layout() {
           {APP_NAME}
         </NavLink>
 
-        <div className="app-header__actions">
-          <nav className="app-nav" aria-label="Main">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) => (isActive || onResultsPage ? "active" : undefined)}
-            >
-              Search
-            </NavLink>
-            <NavLink to="/map">Map</NavLink>
-            <NavLink to="/about">About</NavLink>
-          </nav>
+        <nav className="app-nav" aria-label="Main">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) => (isActive || onResultsPage ? "active" : undefined)}
+          >
+            Search
+          </NavLink>
+          <NavLink to="/map">Map</NavLink>
+          <NavLink to="/about">About</NavLink>
+        </nav>
+        <div className="app-header__toggles">
+          <MusicToggle />
           <ThemeToggle />
         </div>
       </GlassPanel>

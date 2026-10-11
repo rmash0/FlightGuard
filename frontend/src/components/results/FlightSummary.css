@@ -24,6 +24,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 0;
   gap: 2px;
 }
 
@@ -46,6 +47,7 @@
 .flight-route__name {
   color: var(--aero-text-muted);
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 .flight-route__time {

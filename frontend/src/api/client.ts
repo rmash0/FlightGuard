@@ -12,11 +12,13 @@ const MOCK_LATENCY_MS = 400;
 
 export class ApiError extends Error {
   readonly status: number;
+  readonly detail: string | null;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, detail: string | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.detail = detail;
   }
 }
 
@@ -24,7 +26,15 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, { signal });
 
   if (!response.ok) {
-    throw new ApiError(`Request to ${path} failed`, response.status);
+    const body: unknown = await response.json().catch(() => null);
+    const detail =
+      body !== null &&
+      typeof body === "object" &&
+      "detail" in body &&
+      typeof body.detail === "string"
+        ? body.detail
+        : null;
+    throw new ApiError(`Request to ${path} failed`, response.status, detail);
   }
 
   return (await response.json()) as T;

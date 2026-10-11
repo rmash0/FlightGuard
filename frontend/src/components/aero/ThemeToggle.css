@@ -1,41 +1,17 @@
+/* Base look comes from OrbButton.css; this sets the icon color per theme. */
 .theme-toggle {
-  display: inline-grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid var(--aero-glass-border);
-  border-radius: 50%;
   color: var(--aero-amber);
-  cursor: pointer;
-  /* Glossy orb */
-  background-image:
-    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 55%),
-    linear-gradient(180deg, var(--aero-glass-strong), var(--aero-glass-bg));
-  background-origin: border-box;
-  box-shadow:
-    0 3px 10px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 var(--aero-glass-inner);
-  transition: transform 0.2s ease;
 }
 
 :root[data-theme='dark'] .theme-toggle {
   color: #cfe8ff;
-  background-image:
-    radial-gradient(circle at 35% 25%, rgba(170, 220, 255, 0.35), rgba(170, 220, 255, 0) 55%),
-    linear-gradient(180deg, var(--aero-glass-strong), var(--aero-glass-bg));
+}
+
+/* Clownfish orange */
+:root[data-theme='aquarium'] .theme-toggle {
+  color: #ff8a1f;
 }
 
 .theme-toggle:hover {
   transform: rotate(-15deg) scale(1.06);
-}
-
-.theme-toggle:focus-visible {
-  border-radius: 50%;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .theme-toggle {
-    transition: none;
-  }
 }

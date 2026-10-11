@@ -38,6 +38,7 @@ function ResultsMessage({ title, message, onRetry }: ResultsMessageProps) {
 // Friendly copy for each error the lookup endpoint can return (see AGENTS.md §5).
 function describeError(error: unknown, number: string, date: string) {
   const status = error instanceof ApiError ? error.status : null;
+  const detail = error instanceof ApiError ? error.detail : null;
 
   switch (status) {
     case 404:
@@ -47,9 +48,23 @@ function describeError(error: unknown, number: string, date: string) {
         retryable: false,
       };
     case 422:
+      if (detail === "Only US airline flights are supported") {
+        return {
+          title: "Only U.S. airlines for now",
+          message: "We currently support flights on U.S. airlines only. The flight must also depart from or arrive at a U.S. airport.",
+          retryable: false,
+        };
+      }
+      if (detail === "Flight must depart from or arrive at a US airport") {
+        return {
+          title: "That route is outside our coverage",
+          message: "For now, U.S. airline flights must depart from or arrive at a U.S. airport.",
+          retryable: false,
+        };
+      }
       return {
         title: "That flight number doesn't look right",
-        message: "Use an airline code plus a number, like DL1234.",
+        message: "Use a U.S. airline code plus a number, like DL1234. We support U.S. airlines only for now.",
         retryable: false,
       };
     case 502:
@@ -96,26 +111,27 @@ function FlightResults({ number, date }: { number: string; date: string }) {
     <>
       <FlightSummary flight={flight} />
 
-      <div className="results-grid">
-        <GlassPanel as="section" className="results-panel" aria-labelledby="delay-title">
-          <h2 id="delay-title">Delay forecast</h2>
-          {prediction ? (
-            <>
-              <DelayGauge prediction={prediction} />
+      {/* Full-width sections, each split into two halves (stack on narrow screens). */}
+      <GlassPanel as="section" className="results-panel" aria-labelledby="delay-title">
+        <h2 id="delay-title">Delay forecast</h2>
+        {prediction ? (
+          <div className="results-panel__split">
+            <DelayGauge prediction={prediction} />
+            <div className="results-panel__reasons">
               <h3 className="results-panel__subheading">Why</h3>
               <ReasonList reasons={prediction.reasons} />
               <p className="results-panel__footnote">Model: {prediction.model}</p>
-            </>
-          ) : (
-            <p className="text-muted">
-              We couldn't make a delay forecast for this flight right now.
-            </p>
-          )}
-        </GlassPanel>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted">
+            We couldn't make a delay forecast for this flight right now.
+          </p>
+        )}
+      </GlassPanel>
 
-        {/* EmissionsCard (Role D) renders its own GlassPanel and heading, including the null state. */}
-        <EmissionsCard emissions={emissions} />
-      </div>
+      {/* EmissionsCard (Role D) renders its own full-width GlassPanel and heading, including the null state. */}
+      <EmissionsCard emissions={emissions} />
     </>
   );
 }
