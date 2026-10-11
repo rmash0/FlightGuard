@@ -21,18 +21,18 @@ function Layout() {
           {APP_NAME}
         </NavLink>
 
-        <div className="app-header__actions">
-          <nav className="app-nav" aria-label="Main">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) => (isActive || onResultsPage ? "active" : undefined)}
-            >
-              Search
-            </NavLink>
-            <NavLink to="/map">Map</NavLink>
-            <NavLink to="/about">About</NavLink>
-          </nav>
+        <nav className="app-nav" aria-label="Main">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) => (isActive || onResultsPage ? "active" : undefined)}
+          >
+            Search
+          </NavLink>
+          <NavLink to="/map">Map</NavLink>
+          <NavLink to="/about">About</NavLink>
+        </nav>
+        <div className="app-header__toggles">
           <MusicToggle />
           <ThemeToggle />
         </div>

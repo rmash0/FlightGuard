@@ -241,6 +241,16 @@ a {
   color: var(--aero-text-muted);
 }
 
+@media (hover: none) and (pointer: coarse) {
+  body {
+    background-attachment: scroll;
+  }
+
+  .aero-input {
+    scroll-margin-top: 148px;
+  }
+}
+
 /* Hidden visually but still read by screen readers (e.g. labels on compact forms) */
 .visually-hidden {
   position: absolute;

@@ -20,3 +20,10 @@
 .app-main > .glass-panel + .glass-panel {
   margin-top: 20px;
 }
+
+@media (max-width: 600px) {
+  .glass-panel {
+    padding: 18px;
+    border-radius: var(--aero-radius-md);
+  }
+}
