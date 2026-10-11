@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Marker, Popup } from "react-leaflet";
+import { Link } from "react-router";
 import L from "leaflet";
 
 import { getLiveFlightDetails } from "../../api/client";
 import type { LiveFlightDetails } from "../../types/api";
+import { normalizeFlightNumber, toDateInputValue } from "../../utils/flightSearch";
+import { aeroButtonClass } from "../aero/classes";
 
 export type LiveAircraft = {
   icao24: string;
@@ -23,12 +26,15 @@ type PlaneMarkerProps = {
 function PlaneMarker({ aircraft }: PlaneMarkerProps) {
   const [details, setDetails] = useState<LiveFlightDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  // Today's date, captured when the popup opens, for the delay-forecast link.
+  const [forecastDate, setForecastDate] = useState<string | null>(null);
   const requested = useRef(false);
   const requestController = useRef<AbortController | null>(null);
 
   useEffect(() => () => requestController.current?.abort(), []);
 
   const handlePopupOpen = useCallback(() => {
+    setForecastDate(toDateInputValue(new Date()));
     if (requested.current) return;
     requested.current = true;
     const controller = new AbortController();
@@ -49,6 +55,11 @@ function PlaneMarker({ aircraft }: PlaneMarkerProps) {
 
   const detailValue = (value: string | null | undefined) =>
     detailsLoading ? "Looking up..." : value || "Unavailable";
+
+  // Link to the delay forecast once we know the IATA flight number (e.g. DL214).
+  const forecastFlightNumber = details?.flight_number
+    ? normalizeFlightNumber(details.flight_number)
+    : null;
 
   const icon = useMemo(() => {
     const heading = aircraft.heading ?? 0;
@@ -169,6 +180,17 @@ function PlaneMarker({ aircraft }: PlaneMarkerProps) {
                 : "Unknown"}
             </div>
           </div>
+
+          {forecastFlightNumber && forecastDate && (
+            <Link
+              to={`/flight/${forecastFlightNumber}/${forecastDate}`}
+              className={aeroButtonClass("primary")}
+              // Leaflet styles popup links blue; keep the gel button's white text.
+              style={{ display: "flex", marginTop: 12, color: "#fff" }}
+            >
+              Check delay forecast
+            </Link>
+          )}
         </div>
       </Popup>
     </Marker>
