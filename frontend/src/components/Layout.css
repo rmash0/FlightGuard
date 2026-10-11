@@ -6,7 +6,8 @@
 .glass-panel.app-header {
   position: sticky;
   top: 16px;
-  z-index: 10;
+  /* Above Leaflet's panes/controls (up to ~1000) so the map never covers the sticky header */
+  z-index: 2000;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
