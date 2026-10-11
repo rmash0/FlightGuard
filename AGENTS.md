@@ -153,6 +153,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `services/cache.py` provides an in-process async TTL cache with one in-flight fetch per key. Each backend process has its own cache.
 - `GET /api/flights/live` serves OpenSky aircraft within the map viewport from a 60-second backend cache.
 - `GET /api/flights/live/{icao24}/details` looks up flight number and origin/destination via AeroDataBox only when a plane popup opens. Results, including unavailable matches, are cached for 10 minutes per aircraft and callsign; an unconfirmed route is never guessed.
+  - Frontend: once a popup has an IATA `flight_number` (e.g. `DL1634`), `PlaneMarker` shows a "Check delay forecast" button linking to `/flight/<number>/<today>`. It uses React Router, so the click stays inside the app.
 - `services/delay_predictor.py`: `predict_delay(flight)` is called by live lookup, so `/api/flights/lookup` returns a real heuristic prediction (`model: "heuristic-v1"`). Demo-mode lookup still serves the fixture's recorded prediction.
 - `api/routes_predict.py`: `GET /api/predict?number=&date=` resolves the flight through `lookup_flight`, then returns `predict_delay`'s `DelayPrediction`. If lookup has no data (no API key, or no demo fixture for that date), `DL1234` still resolves from a sample schedule.
 - `api/routes_airports.py`: `GET /api/airports/{iata}` returns weather, FAA events, and delay risk for any airport in Role D's `data/airports.json`. The local time zone is estimated from coordinates, except for 11 hubs with checked zones. Role D still owns `GET /api/airports` (the list).
@@ -164,6 +165,8 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - **Routing:** React Router v8 is set up in `main.tsx` (`BrowserRouter`) and `App.tsx`. Every route from §8 exists, inside `components/Layout.tsx` (header + nav + `<Outlet />`).
 - **Pages:**
   - `SearchPage` is done: a hero panel with `FlightSearchForm` and a compact row of feature pills (`<FeatureList variant="compact" />`). It's kept light so the skyline stays visible.
+    - The pills are links: "Delay forecast" goes to `/about#delay-forecast`, "Carbon footprint" to `/about#carbon-footprint`, and "Live map" to `/map`.
+    - `AboutPage` scrolls to the `#anchor` and briefly glows that card.
   - The form validates the flight number and date with inline errors and navigates to `/flight/:number/:date`.
   - Parsing lives in `utils/flightSearch.ts`:
     - `normalizeFlightNumber` accepts `dl 1234`, `DL-1234` and `B6 623`, and returns uppercase with no spaces, or `null`.
@@ -273,7 +276,12 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 
 ### Using the theme (built, in `frontend/src`)
 **How theming works**
-- The theme lives on `<html data-theme="light|dark">`. An inline script in `index.html` sets it before first paint, from `localStorage["theme"]` or the OS setting. `ThemeToggle` switches it and saves the choice.
+- There are **three themes**: `light` (day sky), `dark` (night sky with aurora and moon) and `aquarium` (underwater, with fish and a seabed).
+- The theme lives on `<html data-theme="light|dark|aquarium">`.
+  - An inline script in `index.html` sets it before first paint: from `?theme=...` in the URL, then `localStorage["theme"]`, then the OS light/dark setting.
+  - `ThemeToggle` cycles day → night → aquarium (sun → moon → fish icon) and saves the choice.
+- `?theme=aquarium` (or `light`/`dark`) on any URL selects and saves that theme. Use it for demo links and screenshots.
+- To add a theme: add a `:root[data-theme='x']` token block in `index.css`, add it to `THEMES` in `ThemeToggle.tsx` and to the list in `index.html`, and add an icon.
 - Styling for dark mode means **overriding tokens** under `:root[data-theme='dark']` (or `:root[data-theme='dark'] .your-class`). Never use `@media (prefers-color-scheme)` in components.
 
 **Tokens** (`index.css`, always `var(--aero-*)`)
@@ -298,8 +306,14 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 - `<AeroInput>`: glassy pill input (text, date, etc.) that takes all normal input props. Set `aria-invalid={true}` to show the coral error border. Pair it with a `<label htmlFor>`.
 - `aeroButtonClass(variant?, size?, className?)` from `components/aero/classes.ts`: use this to style a **link** as an Aero button, e.g. `<Link className={aeroButtonClass("primary", "lg")}>`. `cx(...)` from the same file joins class names.
 - `<SkyBackground />` and `<ThemeToggle />` are already rendered by `Layout`. Don't add them again.
-  - `SkyBackground` is the fixed decorative scene behind everything: stars, the full moon (night only), `Skyline` (SVG city, control tower and wind turbines along the bottom) and rising bubbles.
-  - Its colors come from the `--aero-skyline-*`, `--aero-moon-opacity`, `--aero-beacon-opacity`, `--aero-stars-opacity` and `--aero-bubble-opacity` tokens.
+  - `SkyBackground` is the fixed decorative scene behind everything:
+    - stars and the full moon (night only),
+    - sunlight rays (aquarium only),
+    - `Skyline`: SVG city, control tower and wind turbines along the bottom (day and night),
+    - `SeaLife`: swimming fish, and `Seabed`: sand, swaying seaweed, coral and a starfish (aquarium only),
+    - rising bubbles in every theme.
+  - Which scene shows is switched in `SkyBackground.css` with `:root[data-theme='aquarium']` display rules.
+  - Colors come from the `--aero-skyline-*`, `--aero-moon-opacity`, `--aero-beacon-opacity`, `--aero-stars-opacity`, `--aero-rays-opacity` and `--aero-bubble-opacity` tokens.
 - `.app-main` centers text (`text-align: center`). Set `text-align: left` on anything that reads better left-aligned, such as lists, tables and long paragraphs.
 - `<AeroBadge tone="sky|aqua|leaf|amber|coral|muted">`: small glossy pill for statuses, delay risk, an eco score and so on. Amber uses dark text for contrast.
 - Utility classes: `.text-muted`, and `.visually-hidden` (hidden on screen, still read by screen readers).
