@@ -187,7 +187,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `MapPage` shows live aircraft and airports. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
-  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status`) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status` and backend `.detail` when available) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
   - **Mock test flights** (mocks only):
     - `ZZ404`, `ZZ502`, `ZZ503` return those errors.
     - `ZZ1` has `null` prediction and emissions.
