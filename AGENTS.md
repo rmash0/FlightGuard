@@ -318,8 +318,15 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 - `.app-main` centers text (`text-align: center`). Set `text-align: left` on anything that reads better left-aligned, such as lists, tables and long paragraphs.
 - `<AeroBadge tone="sky|aqua|leaf|amber|coral|muted">`: small glossy pill for statuses, delay risk, an eco score and so on. Amber uses dark text for contrast.
 - Utility classes: `.text-muted`, and `.visually-hidden` (hidden on screen, still read by screen readers).
+- `.orb-button` (`OrbButton.css`) is the round glossy header button style shared by `ThemeToggle` and `MusicToggle`.
+
+**Background music** (`MusicToggle`, the note orb in the header)
+- Plays `frontend/public/audio/bgm.mp3` on a loop at a soft volume (25%) with fade in/out. It's off by default and remembers the choice in `localStorage["music"]`. Browsers block autoplay, so a saved "on" resumes at the visitor's first click or key press.
+- The file is **gitignored on purpose** (`frontend/public/audio/bgm.*`). The track the team wants (Wii U Mii Maker) is copyrighted Nintendo music, so each person drops their own copy in locally and it never gets pushed. For anything public (deployed site, demo video), use a royalty-free track instead.
+- With no file, the button shows as disabled ("Background music file not found").
 
 **Gotchas**
+- The sticky header uses `z-index: 2000` so Leaflet's map controls and overlays (up to ~1000) never cover it when scrolling. Keep new overlays below that.
 - When writing `backdrop-filter` with a `-webkit-` prefix, put the **prefixed line first**. The build minifier keeps only the last of the pair, and Chrome/Edge ignore the prefixed version. Dev mode won't show the problem.
 - Respect `prefers-reduced-motion` for any animation.
 
