@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.routes_airport_list import router as airport_list_router
 from app.api.routes_airports import router as airports_router
 from app.api.routes_eco import router as eco_router
 from app.api.routes_flights import router as flights_router
@@ -24,6 +25,7 @@ app.include_router(flights_router, prefix="/api")
 app.include_router(eco_router, prefix="/api")
 app.include_router(live_router, prefix="/api")
 app.include_router(predict_router, prefix="/api")
+app.include_router(airport_list_router, prefix="/api")
 app.include_router(airports_router, prefix="/api")
 
 

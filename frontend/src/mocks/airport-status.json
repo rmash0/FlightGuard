@@ -1,0 +1,19 @@
+{
+  "iata": "ATL",
+  "name": "Hartsfield-Jackson Atlanta Intl",
+  "weather": {
+    "time": "2026-10-11T19:00Z",
+    "weather_code": 95,
+    "description": "Thunderstorm",
+    "wind_gusts_kt": 32,
+    "visibility_m": 4000,
+    "precipitation_mm": 6.1
+  },
+  "faa_events": [
+    { "type": "ground_delay", "reason": "thunderstorms", "avg_minutes": 72, "max_minutes": 125, "end_time": null }
+  ],
+  "risk": "high",
+  "reasons": [
+    { "factor": "faa_origin", "detail": "Ground delay program at ATL (avg 72 min, thunderstorms)", "impact": "high" }
+  ]
+}
