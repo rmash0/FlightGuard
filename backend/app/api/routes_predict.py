@@ -10,7 +10,8 @@ from datetime import date as Date
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.services.delay_predictor import predict_delay
+from app.models.schemas import ModelInfo
+from app.services.delay_predictor import model_info, predict_delay
 from app.services.flight_lookup import lookup_flight
 from app.services.prediction_models import Airline, Airport, DelayPrediction, Flight
 
@@ -27,6 +28,12 @@ _DEMO_FLIGHTS = {
         "aircraft_type": "B739",
     }
 }
+
+
+@router.get("/predict/model", response_model=ModelInfo)
+async def predict_model() -> ModelInfo:
+    """Held-out AUC, months used, and delay rate by departure hour."""
+    return model_info()
 
 
 @router.get("/predict", response_model=DelayPrediction)

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import httpx
 
-from app.clients.memory_cache import MemoryCache
+from app.services.cache import TTLCache
 from app.services.settings import demo_mode, faa_nas_url
 
 CACHE_TTL_SECONDS = 3 * 60
@@ -23,33 +23,31 @@ FIXTURES = Path(__file__).resolve().parents[1] / "data" / "fixtures"
 STORMY_FIXTURE = FIXTURES / "faa_nas_stormy.xml"
 USER_AGENT = "FlightGuard/0.1 (HackNC educational project)"
 
-_cache = MemoryCache()
+_cache: TTLCache[dict] = TTLCache()
 _HOUR = re.compile(r"(\d+)\s*hours?", re.IGNORECASE)
 _MINUTE = re.compile(r"(\d+)\s*minutes?", re.IGNORECASE)
 
 
 def clear_cache() -> None:
-    _cache.clear()
+    global _cache
+    _cache = TTLCache()
 
 
 async def get_airport_events() -> dict[str, list[dict]]:
     """Active NAS events keyed by airport code. Values may be empty."""
     if demo_mode():
         return parse_faa_xml(STORMY_FIXTURE.read_text())
+    return await _cache.get_or_set("nas", CACHE_TTL_SECONDS, _fetch_events)
 
-    cached = _cache.get("nas")
-    if isinstance(cached, dict):
-        return cached
 
+async def _fetch_events() -> dict[str, list[dict]]:
     async with httpx.AsyncClient(timeout=15.0) as client:
         response = await client.get(
             faa_nas_url(),
             headers={"User-Agent": USER_AGENT, "Accept": "application/xml"},
         )
         response.raise_for_status()
-        events = parse_faa_xml(response.text)
-    _cache.set("nas", events, CACHE_TTL_SECONDS)
-    return events
+        return parse_faa_xml(response.text)
 
 
 def parse_duration_minutes(text: str | None) -> int | None:

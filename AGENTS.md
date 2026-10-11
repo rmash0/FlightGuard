@@ -149,12 +149,13 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `GET /` and `GET /api/health` → `{"status": "ok"}`.
 - `api/routes_flights.py`: `GET /api/flights/demo` returns one hard-coded demo flight.
 - `GET /api/flights/lookup` accepts supported US passenger airline codes only and requires the origin or destination to be in the US. It caches successful lookups for 10 minutes and returns clear 404/422/502/503 errors. Live mode needs `AERODATABOX_API_KEY`.
-- `models/schemas.py` mirrors the TypeScript lookup contract. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Live lookup calls Role D's emissions service; prediction remains `null` until Role C's `predict_delay` is called from lookup.
+- `models/schemas.py` mirrors the TypeScript lookup contract, including `ModelInfo` for `GET /api/predict/model`. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Live lookup calls the delay predictor and Role D's emissions service.
 - `services/cache.py` provides an in-process async TTL cache with one in-flight fetch per key. Each backend process has its own cache.
 - `GET /api/flights/live` serves OpenSky aircraft within the map viewport from a 60-second backend cache.
 - `GET /api/flights/live/{icao24}/details` looks up flight number and origin/destination via AeroDataBox only when a plane popup opens. Results, including unavailable matches, are cached for 10 minutes per aircraft and callsign; an unconfirmed route is never guessed.
-- `services/delay_predictor.py`: `predict_delay(flight)` is called by live lookup, so `/api/flights/lookup` returns a real heuristic prediction (`model: "heuristic-v1"`). Demo-mode lookup still serves the fixture's recorded prediction.
-- `api/routes_predict.py`: `GET /api/predict?number=&date=` resolves the flight through `lookup_flight`, then returns `predict_delay`'s `DelayPrediction`. If lookup has no data (no API key, or no demo fixture for that date), `DL1234` still resolves from a sample schedule.
+- `services/delay_predictor.py`: `predict_delay(flight)` is called by live lookup. When `app/data/delay_model.joblib` is present it reports `model: "bts-gbm-v1"`: the BTS probability, plus live weather and FAA adjustments only. Otherwise it uses the heuristic (`model: "heuristic-v1"`). A calm weekday evening stays under the 25% medium cutoff; the old flat +0.5 evening bump does not. Demo-mode lookup still serves the fixture's recorded prediction.
+- `api/routes_predict.py`: `GET /api/predict?number=&date=` resolves the flight through `lookup_flight`, then returns `predict_delay`'s `DelayPrediction`. If lookup has no data (no API key, or no demo fixture for that date), `DL1234` still resolves from a sample schedule. `GET /api/predict/model` returns `ModelInfo` (held-out AUC, months, and `hourly_delay_rate` for a chart).
+- `backend/ml/train.py` trains `HistGradientBoostingClassifier` on BTS on-time zips in `backend/ml/data/` (gitignored) and writes `delay_model.joblib`, `model_meta.json`, and `route_stats.json`.
 - `api/routes_airports.py`: `GET /api/airports/{iata}` returns weather, FAA events, and delay risk for any airport in Role D's `data/airports.json`. The local time zone is estimated from coordinates, except for 11 hubs with checked zones. Role D still owns `GET /api/airports` (the list).
 - `clients/open_meteo_client.py`: hourly forecast for several airports in one call. Cached about 45 minutes. `DEMO_MODE` replays `data/fixtures/open_meteo_rdu_atl.json` (a real RDU+ATL response).
 - `clients/faa_status_client.py`: parses FAA NAS Status XML into events keyed by airport. Cached about 3 minutes. `DEMO_MODE` replays `data/fixtures/faa_nas_stormy.xml`. A recorded live response is in `faa_nas_live.xml`.
@@ -316,6 +317,7 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 |---|---|---|---|
 | GET | `/api/flights/lookup?number=DL1234&date=2026-10-11` | Backend | `FlightLookupResponse` (below): the main search call |
 | GET | `/api/predict?number=...&date=...` | Prediction | `DelayPrediction` |
+| GET | `/api/predict/model` | Prediction | `ModelInfo` (AUC, months, hourly delay rates) |
 | GET | `/api/eco/emissions?carrier=DL&number=1234&origin=RDU&destination=ATL&date=...` | Eco | `Emissions` |
 | GET | `/api/flights/live?lamin&lamax&lomin&lomax` | Eco/Map | live aircraft (cached) |
 | GET | `/api/flights/live/{icao24}/details?callsign=DAL214` | Eco/Map | `LiveFlightDetails` (below), fetched on popup open |
@@ -371,6 +373,23 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 - `estimate_tier`: `flight | route | distance | fallback`
 - `prediction` and `emissions` can be `null` if that service fails. The UI must handle this gracefully.
 - Delay `factor` values: `weather_origin`, `weather_destination`, `faa_origin`, `faa_destination`, `time_of_day`, `day_of_week`, `season`, `historical_route`, `reported_delay`.
+
+### `ModelInfo` (`GET /api/predict/model`)
+Served by Role C for the About page. `test_auc` is null while the heuristic is the only model. `test_month` is the newest month, held out entirely. Calibration uses a random 10% of the training months, so `calibration_month` is null. `hourly_delay_rate` is the chart series (one row per local departure hour). Role A chooses whether that chart sits on About or on the results page.
+```json
+{
+  "model": "bts-gbm-v1",
+  "test_auc": 0.704,
+  "base_rate": 0.283,
+  "train_months": ["2025-10", "2025-11", "2026-04", "2026-05", "2026-06"],
+  "calibration_month": null,
+  "test_month": "2026-07",
+  "months": ["2025-10", "2025-11", "2026-04", "2026-05", "2026-06", "2026-07"],
+  "hourly_delay_rate": [
+    { "hour": 18, "delay_rate": 0.336, "flights": 208568, "mean_delay_minutes": 26.2 }
+  ]
+}
+```
 
 ### `AirportStatus` (`GET /api/airports/{iata}`)
 Served by Role C. Lookup models are in `models/schemas.py`. The airport-status models are in `services/prediction_models.py` until they move there. `faa_events` is empty when the FAA feed has nothing for that airport. `weather` is `null` when the forecast is missing. GA-only closures stay in `faa_events` and are left out of the risk score.

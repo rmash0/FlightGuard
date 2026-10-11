@@ -2,6 +2,8 @@
 
 > Working spec for Role C. `AGENTS.md` is the source of truth: if anything here changes the API contract (§8), update `AGENTS.md`, `schemas.py`, `types/api.ts` and `mocks/lookup.json` in the same PR and ping B.
 >
+> **Progress and open items:** see `docs/role-c-remaining.md`.
+>
 > Field names marked **(verify)** are from memory. Hit each endpoint once and save the real response as a fixture before coding against it.
 
 ## 0. Repo notes before starting
@@ -198,9 +200,12 @@ This needs to be added to §8, and `schemas.py` updated in the same PR.
 | | Gusts ≥ 35 kt | +0.8 | medium |
 | | Visibility < 1600 m or fog | +0.7 | medium |
 | | Heavy rain | +0.4 | low |
-| Time of day (local departure hour) | 17:00–21:59 | +0.5 | low |
+| Time of day (local departure hour) | 17:00–18:59 | +0.12 | low |
+| | 19:00–21:59 | +0.20 | low |
 | | Before 09:00 | −0.4 | low |
 | Day / season | Fri/Sun, or Jun–Aug, or Dec holidays | +0.2 | low |
+
+The evening deltas used to be a flat +0.5, which scored every calm evening near 29% (medium). A weekday evening with no weather or FAA program now stays under the 25% cutoff. The trained model, not this table, carries the real hour and route effect.
 
 - `probability = sigmoid(sum)`
 - **Risk:** low if probability < 0.25, medium if < 0.50, otherwise high.

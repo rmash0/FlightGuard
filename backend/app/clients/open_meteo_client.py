@@ -12,7 +12,7 @@ from pathlib import Path
 
 import httpx
 
-from app.clients.memory_cache import MemoryCache
+from app.services.cache import TTLCache
 from app.services.settings import demo_mode, open_meteo_base_url
 
 logger = logging.getLogger(__name__)
@@ -27,11 +27,12 @@ FIXTURE_PATH = (
 )
 USER_AGENT = "FlightGuard/0.1 (HackNC educational project)"
 
-_cache = MemoryCache()
+_cache: TTLCache[list] = TTLCache()
 
 
 def clear_cache() -> None:
-    _cache.clear()
+    global _cache
+    _cache = TTLCache()
 
 
 async def get_forecast(
@@ -50,14 +51,22 @@ async def get_forecast(
     if demo_mode():
         return _from_fixture(points, start_date)
 
-    keys = [
+    key = tuple(
         f"{round(lat, 2):.2f},{round(lon, 2):.2f},{start_date.isoformat()},{end.isoformat()}"
         for lat, lon in points
-    ]
-    cached = [_cache.get(key) for key in keys]
-    if all(item is not None for item in cached):
-        return [item if isinstance(item, dict) else None for item in cached]
+    )
+    return await _cache.get_or_set(
+        key,
+        CACHE_TTL_SECONDS,
+        lambda: _fetch_forecast(points, start_date, end),
+    )
 
+
+async def _fetch_forecast(
+    points: list[tuple[float, float]],
+    start_date: date,
+    end: date,
+) -> list[dict | None]:
     params = {
         "latitude": ",".join(f"{lat:.4f}" for lat, _ in points),
         "longitude": ",".join(f"{lon:.4f}" for _, lon in points),
@@ -81,8 +90,6 @@ async def get_forecast(
     for index in range(len(points)):
         row = rows[index] if index < len(rows) and isinstance(rows[index], dict) else None
         result.append(row)
-        if row is not None:
-            _cache.set(keys[index], row, CACHE_TTL_SECONDS)
     if len(rows) != len(points):
         logger.warning(
             "Open-Meteo returned %s location(s) for %s requested",

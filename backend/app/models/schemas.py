@@ -85,3 +85,23 @@ class LiveFlightDetails(BaseModel):
     flight_number: str | None
     origin: str | None
     destination: str | None
+
+
+class HourlyDelayRate(BaseModel):
+    hour: int = Field(ge=0, le=23)
+    delay_rate: float
+    flights: int
+    mean_delay_minutes: float
+
+
+class ModelInfo(BaseModel):
+    """GET /api/predict/model. Accuracy for the About page, plus chart data."""
+
+    model: str
+    test_auc: float | None = None
+    base_rate: float | None = None
+    train_months: list[str]
+    calibration_month: str | None = None
+    test_month: str | None = None
+    months: list[str]
+    hourly_delay_rate: list[HourlyDelayRate]

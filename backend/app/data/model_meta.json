@@ -1,0 +1,168 @@
+{
+  "model": "bts-gbm-v1",
+  "test_auc": 0.704,
+  "base_rate": 0.2834,
+  "train_months": [
+    "2025-10",
+    "2025-11",
+    "2026-04",
+    "2026-05",
+    "2026-06"
+  ],
+  "calibration_month": null,
+  "test_month": "2026-07",
+  "months": [
+    "2025-10",
+    "2025-11",
+    "2026-04",
+    "2026-05",
+    "2026-06",
+    "2026-07"
+  ],
+  "hourly_delay_rate": [
+    {
+      "hour": 0,
+      "delay_rate": 0.1803,
+      "flights": 5274,
+      "mean_delay_minutes": 14.7
+    },
+    {
+      "hour": 1,
+      "delay_rate": 0.1571,
+      "flights": 1668,
+      "mean_delay_minutes": 14.2
+    },
+    {
+      "hour": 2,
+      "delay_rate": 0.1655,
+      "flights": 562,
+      "mean_delay_minutes": 13.7
+    },
+    {
+      "hour": 3,
+      "delay_rate": 0.1739,
+      "flights": 299,
+      "mean_delay_minutes": 19.1
+    },
+    {
+      "hour": 4,
+      "delay_rate": 0.1765,
+      "flights": 85,
+      "mean_delay_minutes": 15.1
+    },
+    {
+      "hour": 5,
+      "delay_rate": 0.0748,
+      "flights": 99794,
+      "mean_delay_minutes": 8.1
+    },
+    {
+      "hour": 6,
+      "delay_rate": 0.088,
+      "flights": 246167,
+      "mean_delay_minutes": 8.7
+    },
+    {
+      "hour": 7,
+      "delay_rate": 0.1179,
+      "flights": 266703,
+      "mean_delay_minutes": 9.3
+    },
+    {
+      "hour": 8,
+      "delay_rate": 0.1357,
+      "flights": 244094,
+      "mean_delay_minutes": 9.9
+    },
+    {
+      "hour": 9,
+      "delay_rate": 0.1562,
+      "flights": 199892,
+      "mean_delay_minutes": 10.8
+    },
+    {
+      "hour": 10,
+      "delay_rate": 0.1765,
+      "flights": 226594,
+      "mean_delay_minutes": 12.3
+    },
+    {
+      "hour": 11,
+      "delay_rate": 0.1966,
+      "flights": 218065,
+      "mean_delay_minutes": 14.0
+    },
+    {
+      "hour": 12,
+      "delay_rate": 0.2202,
+      "flights": 211373,
+      "mean_delay_minutes": 16.1
+    },
+    {
+      "hour": 13,
+      "delay_rate": 0.2397,
+      "flights": 211171,
+      "mean_delay_minutes": 17.6
+    },
+    {
+      "hour": 14,
+      "delay_rate": 0.2714,
+      "flights": 199828,
+      "mean_delay_minutes": 20.2
+    },
+    {
+      "hour": 15,
+      "delay_rate": 0.2866,
+      "flights": 203411,
+      "mean_delay_minutes": 21.5
+    },
+    {
+      "hour": 16,
+      "delay_rate": 0.3111,
+      "flights": 202393,
+      "mean_delay_minutes": 23.4
+    },
+    {
+      "hour": 17,
+      "delay_rate": 0.32,
+      "flights": 222717,
+      "mean_delay_minutes": 25.1
+    },
+    {
+      "hour": 18,
+      "delay_rate": 0.3362,
+      "flights": 208568,
+      "mean_delay_minutes": 26.2
+    },
+    {
+      "hour": 19,
+      "delay_rate": 0.3388,
+      "flights": 192492,
+      "mean_delay_minutes": 25.8
+    },
+    {
+      "hour": 20,
+      "delay_rate": 0.34,
+      "flights": 161613,
+      "mean_delay_minutes": 25.7
+    },
+    {
+      "hour": 21,
+      "delay_rate": 0.3089,
+      "flights": 120814,
+      "mean_delay_minutes": 23.6
+    },
+    {
+      "hour": 22,
+      "delay_rate": 0.2926,
+      "flights": 83854,
+      "mean_delay_minutes": 22.1
+    },
+    {
+      "hour": 23,
+      "delay_rate": 0.2051,
+      "flights": 32220,
+      "mean_delay_minutes": 15.3
+    }
+  ]
+}

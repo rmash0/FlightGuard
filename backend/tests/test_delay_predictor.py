@@ -11,7 +11,14 @@ from app.clients.faa_status_client import clear_cache as clear_faa_cache
 from app.clients.faa_status_client import parse_duration_minutes, parse_faa_xml
 from app.clients.open_meteo_client import clear_cache as clear_weather_cache
 from app.clients.open_meteo_client import get_forecast
-from app.services.delay_predictor import clear_caches, pick_hour, score_delay
+from app.services.delay_predictor import (
+    MODEL_PATH,
+    _Contribution,
+    _great_circle_miles,
+    clear_caches,
+    pick_hour,
+    score_delay,
+)
 
 FIXTURES = Path(__file__).resolve().parents[1] / "app" / "data" / "fixtures"
 EASTERN = timezone(timedelta(hours=-4))
@@ -233,6 +240,201 @@ class HeuristicTests(unittest.TestCase):
         self.assertTrue(any("16 days" in reason.detail for reason in prediction.reasons))
         self.assertTrue(all(reason.factor != "weather_destination" for reason in prediction.reasons))
 
+    def test_calm_evening_stays_low_risk(self):
+        departure = _neutral_noon().replace(hour=18)
+        prediction = score_delay(
+            origin_iata="RDU",
+            destination_iata="ATL",
+            departure=departure,
+            arrival=departure + timedelta(hours=2),
+            origin_weather=CLEAR,
+            destination_weather=CLEAR,
+            faa_events={},
+            now=departure - timedelta(hours=3),
+        )
+        self.assertEqual(prediction.risk, "low")
+        self.assertLess(prediction.probability_delayed, 0.25)
+        self.assertLessEqual(prediction.estimated_delay_minutes, 15)
+        self.assertEqual(prediction.model, "heuristic-v1")
+
+    def test_late_evening_stays_low_risk(self):
+        departure = _neutral_noon().replace(hour=20)
+        prediction = score_delay(
+            origin_iata="RDU",
+            destination_iata="ATL",
+            departure=departure,
+            arrival=departure + timedelta(hours=2),
+            origin_weather=CLEAR,
+            destination_weather=CLEAR,
+            faa_events={},
+            now=departure - timedelta(hours=3),
+        )
+        self.assertEqual(prediction.risk, "low")
+        self.assertLessEqual(prediction.probability_delayed, 0.24)
+
+    def test_friday_evening_does_not_jump_to_high_risk(self):
+        departure = _neutral_noon()
+        while departure.weekday() != 4:
+            departure += timedelta(days=1)
+        departure = departure.replace(hour=20)
+        prediction = score_delay(
+            origin_iata="RDU",
+            destination_iata="ATL",
+            departure=departure,
+            arrival=departure + timedelta(hours=2),
+            origin_weather=CLEAR,
+            destination_weather=CLEAR,
+            faa_events={},
+            now=departure - timedelta(hours=3),
+        )
+        self.assertLess(prediction.probability_delayed, 0.35)
+        self.assertNotEqual(prediction.risk, "high")
+        self.assertLessEqual(prediction.estimated_delay_minutes, 20)
+
+    def test_model_blend_skips_the_evening_bump(self):
+        departure = _neutral_noon().replace(hour=20)
+        shared = dict(
+            origin_iata="RDU",
+            destination_iata="ATL",
+            departure=departure,
+            arrival=departure + timedelta(hours=2),
+            origin_weather=CLEAR,
+            destination_weather=CLEAR,
+            faa_events={},
+            now=departure - timedelta(hours=3),
+            base_probability=0.22,
+            model_name="bts-gbm-v1",
+            history=_Contribution(
+                "historical_route",
+                "Historically 22% of RDU→ATL flights arrive late",
+                "low",
+                0.0,
+                explain_only=True,
+            ),
+            history_baseline={"delay_rate": 0.22, "mean_delay_minutes": 12.0, "flights": 400},
+        )
+        calm = score_delay(**shared)
+        self.assertEqual(calm.model, "bts-gbm-v1")
+        self.assertEqual(calm.risk, "low")
+        self.assertEqual(calm.probability_delayed, 0.22)
+        self.assertEqual(calm.estimated_delay_minutes, 12)
+        self.assertTrue(any(reason.factor == "historical_route" for reason in calm.reasons))
+        self.assertTrue(
+            any("No weather or airport issues expected" in reason.detail for reason in calm.reasons)
+        )
+
+    def test_model_blend_still_raises_risk_for_thunderstorms(self):
+        departure = _neutral_noon().replace(hour=20)
+        prediction = score_delay(
+            origin_iata="RDU",
+            destination_iata="ATL",
+            departure=departure,
+            arrival=departure + timedelta(hours=2),
+            origin_weather=CLEAR,
+            destination_weather={
+                "time": "2026-03-03T22:00",
+                "weather_code": 95,
+                "precipitation_mm": 4.0,
+                "visibility_m": 6000,
+                "wind_gusts_kt": 20,
+            },
+            faa_events={},
+            now=departure - timedelta(hours=2),
+            base_probability=0.22,
+            model_name="bts-gbm-v1",
+        )
+        self.assertGreaterEqual(prediction.probability_delayed, 0.5)
+        self.assertEqual(prediction.risk, "high")
+        self.assertEqual(prediction.model, "bts-gbm-v1")
+
+    def test_same_number_and_time_on_another_route_is_not_reused(self):
+        from app.services.delay_predictor import predict_delay
+        from app.services.prediction_models import Airline, Airport, Flight
+
+        previous = os.environ.get("DEMO_MODE")
+        os.environ["DEMO_MODE"] = "true"
+        clear_caches()
+
+        def flight(origin, dest, origin_ll, dest_ll):
+            return Flight(
+                number="DL100",
+                airline=Airline(iata="DL", name="Delta Air Lines"),
+                date="2026-10-14",
+                origin=Airport(iata=origin, name=origin, lat=origin_ll[0], lon=origin_ll[1]),
+                destination=Airport(iata=dest, name=dest, lat=dest_ll[0], lon=dest_ll[1]),
+                scheduled_departure="2026-10-14T18:05:00-04:00",
+                scheduled_arrival="2026-10-14T20:20:00-04:00",
+                status="scheduled",
+            )
+
+        try:
+            rdu = asyncio.run(
+                predict_delay(flight("RDU", "ATL", (35.88, -78.79), (33.64, -84.43)))
+            )
+            other = asyncio.run(
+                predict_delay(flight("ORD", "LGA", (41.97, -87.91), (40.77, -73.87)))
+            )
+        finally:
+            if previous is None:
+                os.environ.pop("DEMO_MODE", None)
+            else:
+                os.environ["DEMO_MODE"] = previous
+            clear_caches()
+        self.assertIsNotNone(rdu)
+        self.assertIsNotNone(other)
+        assert rdu is not None and other is not None
+        self.assertTrue(any("RDU→ATL" in reason.detail for reason in rdu.reasons))
+        self.assertTrue(any("ORD→LGA" in reason.detail for reason in other.reasons))
+        self.assertGreater(other.probability_delayed, rdu.probability_delayed)
+
+    @unittest.skipUnless(MODEL_PATH.exists(), "BTS model not trained")
+    def test_international_leg_uses_the_heuristic(self):
+        from app.services.delay_predictor import predict_delay
+        from app.services.prediction_models import Airline, Airport, Flight
+
+        flight = Flight(
+            number="AA100",
+            airline=Airline(iata="AA", name="American Airlines"),
+            date="2026-10-14",
+            origin=Airport(iata="JFK", name="JFK", lat=40.64, lon=-73.78),
+            destination=Airport(iata="LHR", name="Heathrow", lat=51.47, lon=-0.46),
+            scheduled_departure="2026-10-14T18:10:00-04:00",
+            scheduled_arrival="2026-10-15T06:25:00+01:00",
+            status="scheduled",
+        )
+        previous = os.environ.get("DEMO_MODE")
+        os.environ["DEMO_MODE"] = "true"
+        clear_caches()
+        try:
+            prediction = asyncio.run(predict_delay(flight))
+        finally:
+            if previous is None:
+                os.environ.pop("DEMO_MODE", None)
+            else:
+                os.environ["DEMO_MODE"] = previous
+            clear_caches()
+        assert prediction is not None
+        self.assertEqual(prediction.model, "heuristic-v1")
+
+    @unittest.skipUnless(MODEL_PATH.exists(), "BTS model not trained")
+    def test_model_explains_a_late_departure_hour(self):
+        from app.services.delay_predictor import _hour_note
+
+        evening = _hour_note(datetime(2026, 10, 14, 19, 0, tzinfo=EASTERN))
+        early = _hour_note(datetime(2026, 10, 14, 6, 0, tzinfo=EASTERN))
+        midday = _hour_note(datetime(2026, 10, 14, 11, 0, tzinfo=EASTERN))
+        assert evening is not None and early is not None
+        self.assertIn("7 pm", evening.detail)
+        self.assertIn("6 am", early.detail)
+        self.assertTrue(evening.explain_only)
+        self.assertEqual(evening.delta, 0.0)
+        self.assertIsNone(midday)
+
+    def test_rdu_atl_distance_is_about_350_miles(self):
+        miles = _great_circle_miles(35.88, -78.79, 33.64, -84.43)
+        self.assertGreater(miles, 330)
+        self.assertLess(miles, 390)
+
 
 class WeatherFixtureTests(unittest.TestCase):
     def test_pick_hour_reads_rdu_and_atl_from_one_payload(self):
@@ -296,7 +498,8 @@ class RouteTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200, response.text)
         body = response.json()
-        self.assertEqual(body["model"], "heuristic-v1")
+        expected = "bts-gbm-v1" if MODEL_PATH.exists() else "heuristic-v1"
+        self.assertEqual(body["model"], expected)
         self.assertIn(body["risk"], ("low", "medium", "high"))
         self.assertGreaterEqual(body["probability_delayed"], 0)
         self.assertLessEqual(body["probability_delayed"], 1)
@@ -345,11 +548,26 @@ class RouteTests(unittest.TestCase):
         response = self.client.get("/api/airports/XYZ")
         self.assertEqual(response.status_code, 404)
 
+    def test_model_endpoint_reports_accuracy(self):
+        response = self.client.get("/api/predict/model")
+        self.assertEqual(response.status_code, 200, response.text)
+        body = response.json()
+        self.assertIn(body["model"], ("heuristic-v1", "bts-gbm-v1"))
+        self.assertIn("hourly_delay_rate", body)
+        self.assertIn("test_auc", body)
+        if body["model"] == "bts-gbm-v1":
+            self.assertGreater(body["test_auc"], 0.5)
+            self.assertLess(body["test_auc"], 1)
+            self.assertEqual(len(body["hourly_delay_rate"]), 24)
+            self.assertGreater(body["base_rate"], 0.05)
+            self.assertLess(body["base_rate"], 0.5)
+
     def test_openapi_lists_both_routes(self):
         response = self.client.get("/openapi.json")
         self.assertEqual(response.status_code, 200)
         paths = response.json()["paths"]
         self.assertIn("/api/predict", paths)
+        self.assertIn("/api/predict/model", paths)
         self.assertIn("/api/airports/{iata}", paths)
         predict_schema = paths["/api/predict"]["get"]["responses"]["200"]["content"][
             "application/json"
@@ -386,4 +604,5 @@ class LookupHandoffTests(unittest.TestCase):
         )
         self.assertIsNotNone(prediction)
         assert prediction is not None
-        self.assertEqual(prediction.model, "heuristic-v1")
+        expected = "bts-gbm-v1" if MODEL_PATH.exists() else "heuristic-v1"
+        self.assertEqual(prediction.model, expected)
