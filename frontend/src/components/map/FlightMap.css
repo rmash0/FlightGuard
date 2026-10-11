@@ -1,0 +1,58 @@
+.flight-map {
+  height: min(70vh, 650px);
+  min-height: 400px;
+}
+
+.flight-map__count {
+  top: 16px;
+  right: 16px;
+  padding: 10px 14px;
+}
+
+.flight-map__error {
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+}
+
+.flight-map__credit {
+  display: flex;
+  right: 16px;
+  bottom: 16px;
+  padding: 7px 12px;
+}
+
+@media (max-width: 600px) {
+  .flight-map {
+    height: clamp(300px, 52svh, 440px);
+    min-height: 0;
+  }
+
+  .flight-map__count {
+    top: 10px;
+    right: 10px;
+    max-width: calc(100% - 70px);
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .flight-map__error {
+    bottom: 16px;
+    max-width: calc(100% - 32px);
+    padding: 10px 12px;
+  }
+
+  .flight-map__credit {
+    display: none;
+  }
+
+  .flight-map .leaflet-popup-content-wrapper {
+    max-width: calc(100vw - 52px);
+  }
+
+  .flight-map .leaflet-popup-content {
+    max-width: calc(100vw - 80px);
+    overflow-wrap: anywhere;
+  }
+}

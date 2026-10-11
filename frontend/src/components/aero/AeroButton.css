@@ -102,6 +102,12 @@
   font-size: 1.1rem;
 }
 
+@media (hover: none) and (pointer: coarse) {
+  .aero-button {
+    min-height: 44px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aero-button,
   .aero-button::after {
