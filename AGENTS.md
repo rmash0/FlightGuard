@@ -198,6 +198,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `types/api.ts` mirrors the §8 contract, and `mocks/lookup.json` is a sample response.
 - **Vite dev proxy:** `/api` → `http://127.0.0.1:8000`, so the frontend uses relative URLs only and CORS isn't involved in dev.
 - `components/eco/EmissionsCard.tsx` (Role D) is built: cabin-class picker, kg CO2e per passenger, estimate tier, `EcoComparison`, and the source note. Props: `{ emissions: Emissions | null }`.
+  - Environmental equivalents (backend `calculate_comparisons`): km in a gas car, days of an average American's emissions, urban tree seedlings, and smartphones fully charged (EPA, 0.0124 kg CO2 per charge). Four boxes keep the card's 2×2 grid even. `EcoComparison` picks icons by label keyword.
   - It renders **its own** `GlassPanel` and "Carbon Footprint" heading, including the `null` state. `ResultsPage` places it straight into the results grid without wrapping it.
 - `config.ts` holds `APP_NAME`. `<title>` is "FlightGuard".
 - **Aero theme:** done. Tokens for light and dark are in `index.css`, the shared components are in `components/aero/`, and the glass nav bar, sky background (bubbles, city skyline with control tower and wind turbines, stars and a full moon at night), theme toggle and Aero favicon are in place. Page content is centered. See §7 "Using the theme".
@@ -276,7 +277,7 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 
 ### Using the theme (built, in `frontend/src`)
 **How theming works**
-- There are **three themes**: `light` (day sky), `dark` (night sky with aurora and moon) and `aquarium` (underwater, with fish and a seabed).
+- There are **three themes**: `light` (day sky), `dark` (night sky with aurora and moon) and `aquarium` (bright turquoise Frutiger Aero water, with tropical fish, light rays, bokeh and a colorful reef).
 - The theme lives on `<html data-theme="light|dark|aquarium">`.
   - An inline script in `index.html` sets it before first paint: from `?theme=...` in the URL, then `localStorage["theme"]`, then the OS light/dark setting.
   - `ThemeToggle` cycles day → night → aquarium (sun → moon → fish icon) and saves the choice.
@@ -313,7 +314,7 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
     - `SeaLife`: swimming fish, and `Seabed`: sand, swaying seaweed, coral and a starfish (aquarium only),
     - rising bubbles in every theme.
   - Which scene shows is switched in `SkyBackground.css` with `:root[data-theme='aquarium']` display rules.
-  - Colors come from the `--aero-skyline-*`, `--aero-moon-opacity`, `--aero-beacon-opacity`, `--aero-stars-opacity`, `--aero-rays-opacity` and `--aero-bubble-opacity` tokens.
+  - Colors come from the `--aero-skyline-*`, `--aero-moon-opacity`, `--aero-beacon-opacity`, `--aero-stars-opacity`, `--aero-rays-opacity`, `--aero-bokeh-opacity` (colored light spots, aquarium only) and `--aero-bubble-opacity` tokens.
 - `.app-main` centers text (`text-align: center`). Set `text-align: left` on anything that reads better left-aligned, such as lists, tables and long paragraphs.
 - `<AeroBadge tone="sky|aqua|leaf|amber|coral|muted">`: small glossy pill for statuses, delay risk, an eco score and so on. Amber uses dark text for contrast.
 - Utility classes: `.text-muted`, and `.visually-hidden` (hidden on screen, still read by screen readers).
