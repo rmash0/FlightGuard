@@ -1,8 +1,21 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router";
+
 import GlassPanel from "../components/aero/GlassPanel";
 import FeatureList from "../components/features/FeatureList";
 import { APP_NAME } from "../config";
 
 function AboutPage() {
+  const { hash } = useLocation();
+  const targetId = hash.slice(1);
+
+  // Client-side navigation doesn't scroll to #anchors on its own.
+  useEffect(() => {
+    if (targetId) {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [targetId]);
+
   return (
     <>
       <GlassPanel as="section">
@@ -13,7 +26,7 @@ function AboutPage() {
         </p>
       </GlassPanel>
 
-      <FeatureList variant="cards" />
+      <FeatureList variant="cards" highlightedId={targetId} />
 
       <GlassPanel as="section" className="about-credits">
         <p className="text-muted">
