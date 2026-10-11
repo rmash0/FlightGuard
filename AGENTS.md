@@ -191,17 +191,20 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `MapPage` shows live aircraft and airports. Airport popups load `GET /api/airports/{iata}` on open and show a delay-risk badge, weather, FAA status and top reasons. Tiles are keyless OpenStreetMap; night mode darkens them with a CSS filter on `.leaflet-tile-pane` in `FlightMap.css`. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. Dark-mode popup headings use a dark, crisp color against Leaflet's white popup. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
-  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, `getLiveFlightDetails`, `getMapAirports` and `getAirportStatus`, plus `ApiError` (with `.status` and backend `.detail` when available) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
-  - **Mock test flights** (mocks only):
-    - `ZZ404`, `ZZ502`, `ZZ503` return those errors.
-    - `ZZ1` has `null` prediction and emissions.
-    - `ZZ2` is a delayed, high-risk flight.
-    - Any other number returns the sample flight.
-  - In mock mode the map gets no aircraft or airports, and `getAirportStatus` returns `mocks/airport-status.json`.
-  - Mocks vs real backend:
-    - With mocks off and the backend in `DEMO_MODE=true`, only `DL1234` on `2026-10-11` exists. Everything else returns 404.
-    - `.env.local` overrides `.env.example`, so to test against the real backend, set `VITE_USE_MOCKS=false` there (or prefix the command) and restart Vite.
-  - `types/api.ts` mirrors the §8 contract, and `mocks/lookup.json` is a sample response.
+  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, `getLiveFlightDetails`, `getMapAirports`, `getAirportStatus` and `getDemoFlights`, plus `ApiError` and `NOT_IN_DEMO` (from `api/errors.ts`).
+  - **Demo mode** (`USE_SAMPLE_DATA` in `config.ts`, true when `VITE_USE_MOCKS=true`):
+    - **What it is:** the hosted demo. Every client call is answered by `api/demoData.ts` from real API responses recorded in `src/mocks/demo/` (flights, aircraft snapshot, plane popup details, airport status, airport list). No backend calls are made.
+    - **Lazy loading:** `demoData.ts` is imported only in demo mode, so normal builds never download the data. It's a separate ~80 KB gzipped chunk.
+    - **How to run it:** `npm run dev:demo` / `npm run build:demo` use Vite's `demo` mode (`frontend/.env.demo`, committed, no secrets). `frontend/vercel.json` builds the demo for Vercel, with the root directory set to `frontend`.
+    - **Flights:** 29 recorded flights, one from each major US city into RDU, a few RDU departures, and flights that were airborne at recording time. Recorded flights follow whatever date the visitor picks (times shift by whole days). Unknown numbers throw a 404 with `detail: NOT_IN_DEMO`; the results page then shows `DemoFlightList` ("Try a sample flight").
+    - **Map:** about 1,500 recorded planes glide along their heading and loop every 15 minutes. Only the airborne demo flights have popup details and a forecast link. Airports outside the recording get a calm fallback status.
+    - **UI:** a "Demo" `AeroBadge` sits next to the app name, and the search page shows `components/demo/DemoFlightList`.
+    - **Test flights** (dev only, still work in demo mode): `ZZ404`, `ZZ502` and `ZZ503` return those errors, `ZZ1` has `null` prediction and emissions, and `ZZ2` is a delayed, high-risk flight. They're built from `mocks/lookup.json`.
+    - **Refreshing the data:** `cd backend && uv run python scripts/record_demo_data.py`. It needs live keys, makes about 30–40 AeroDataBox calls, and reuses flights already recorded the same day.
+  - Real backend:
+    - With `VITE_USE_MOCKS=false` and the backend in `DEMO_MODE=true`, only `DL1234` on `2026-10-11` exists. Everything else returns 404.
+    - `.env.local` overrides `.env.example`. Vite's `demo` mode (`.env.demo`) overrides `.env.local`.
+  - `types/api.ts` mirrors the §8 contract.
 - **Vite dev proxy:** `/api` → `http://127.0.0.1:8000`, so the frontend uses relative URLs only and CORS isn't involved in dev.
 - `components/eco/EmissionsCard.tsx` (Role D) is built: cabin-class picker, kg CO2e per passenger, estimate tier, `EcoComparison`, and the source note. Props: `{ emissions: Emissions | null }`.
   - Environmental equivalents (backend `calculate_comparisons`): km in a gas car, days of an average American's emissions, urban tree seedlings, and smartphones fully charged (EPA, 0.0124 kg CO2 per charge). Four boxes keep the card's 2×2 grid even. `EcoComparison` picks icons by label keyword.

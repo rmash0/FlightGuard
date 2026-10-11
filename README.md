@@ -6,6 +6,20 @@
 
 ---
 
+## Try the demo
+
+> **The hosted demo runs on recorded sample data.** Every flight, forecast, emissions figure and map plane in it is a real API response captured earlier. That lets it run as a plain static site, with no backend and no API keys.
+
+**What the demo includes:**
+- **29 real flights:** one from each major US city into Raleigh-Durham (RDU), a few RDU departures, and several flights that were in the air across the country. The search page lists them all. Pick any date, and the flights follow it.
+- **The live map,** with about 1,500 recorded planes that glide along their headings, all 873 airports, and popups for the planes that are part of the demo.
+
+**To search any flight with live data,** run FlightGuard yourself with your own free API keys (see [Run it with live data](#run-it-with-live-data)).
+
+![Demo search page with sample flights](docs/screenshots/demo.png)
+
+---
+
 ## What it does
 
 ### Flight search and delay forecast
@@ -88,37 +102,64 @@ The layout adapts down to phone width, with a two-row header, full-width control
 
 ---
 
-## Running it locally
+## Running it yourself
 
-**You'll need:** Node.js 22.22 or newer, Python 3.14, and [uv](https://docs.astral.sh/uv/).
+**You'll need:** Node.js 22.22 or newer. For live data you also need Python 3.14 and [uv](https://docs.astral.sh/uv/).
 
-### 1. Backend
-```bash
-cd backend
-cp .env.example .env      # then fill in your keys (see below)
-uv sync
-uv run fastapi dev app/main.py
-```
-The API runs at http://127.0.0.1:8000, with interactive docs at `/docs`.
-
-| Variable | What it's for |
-|---|---|
-| `AERODATABOX_API_KEY` | RapidAPI key for flight lookups and map flight numbers |
-| `GOOGLE_TIM_API_KEY` | Google Cloud key with the Travel Impact Model API enabled |
-| `OPENSKY_CLIENT_ID`, `OPENSKY_CLIENT_SECRET` | OpenSky API client for the live map. It works anonymously without them, but with a much lower rate limit |
-| `OPEN_METEO_BASE_URL`, `FAA_NAS_URL` | Preset, no key needed |
-| `DEMO_MODE` | `true` serves a recorded sample flight (`DL1234` on 2026-10-11) with no keys at all |
-
-### 2. Frontend
+### Demo mode (no keys, no backend)
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local   # set VITE_USE_MOCKS=false to use the backend
+npm run dev:demo
+```
+Open http://localhost:5173. This is exactly what the hosted demo runs.
+
+### Run it with live data
+This lets you search any US airline flight with live status, forecasts and emissions. Every service has a free tier.
+
+**1. Get your API keys.** `backend/.env.example` walks through each one step by step: where to sign up, which button to press, and what still works without it.
+
+| Variable | Needed for | Without it |
+|---|---|---|
+| `AERODATABOX_API_KEY` | Flight search, and flight numbers on map planes | Searches say live data isn't connected |
+| `GOOGLE_TIM_API_KEY` | Carbon footprint from Google's model | Falls back to a rough distance-based estimate |
+| `OPENSKY_CLIENT_ID`, `OPENSKY_CLIENT_SECRET` | Live map planes | Works anonymously, with a much lower daily limit |
+| `OPEN_METEO_BASE_URL`, `FAA_NAS_URL` | Weather and airport status | Preset; no keys needed |
+| `DEMO_MODE` | Set to `false` once your keys are in | `true` serves one recorded sample flight (`DL1234` on 2026-10-11) |
+
+**2. Start the backend.**
+```bash
+cd backend
+cp .env.example .env      # then paste your keys into .env
+uv sync
+uv run fastapi dev app/main.py
+```
+The API runs at http://127.0.0.1:8000, with interactive docs at `/docs`. Your keys stay in `backend/.env`, which is gitignored. The browser never sees them.
+
+**3. Start the frontend.**
+```bash
+cd frontend
+npm install
+cp .env.example .env.local   # VITE_USE_MOCKS=false means use the backend
 npm run dev
 ```
 Open http://localhost:5173.
 
-`VITE_USE_MOCKS=true` runs the frontend with no backend at all, using sample data. In this mode, the flight numbers `ZZ1`, `ZZ2`, `ZZ404`, `ZZ502` and `ZZ503` preview the empty, delayed and error states.
+In demo mode, the flight numbers `ZZ1`, `ZZ2`, `ZZ404`, `ZZ502` and `ZZ503` preview the empty, delayed and error states, which is handy while developing.
+
+### Hosting the demo on Vercel
+1. Import the repo in Vercel and set the **Root Directory** to `frontend`.
+2. Deploy. `frontend/vercel.json` already sets the demo build (`npm run build:demo`), the `dist` output folder, and the page routing rule.
+
+No environment variables or keys are needed, because the demo never calls a backend. Set the project's Node.js version to 22.x or newer.
+
+### Refreshing the demo data
+With live keys in `backend/.env`, this records a fresh set of flights, map planes and airport status into `frontend/src/mocks/demo/`:
+```bash
+cd backend
+uv run python scripts/record_demo_data.py
+```
+It makes about 30–40 AeroDataBox calls, so it uses part of your monthly quota.
 
 ### Retraining the delay model (optional)
 A trained model is already included in `backend/app/data/`. To retrain it, download monthly "Reporting Carrier On-Time Performance" zips from BTS into `backend/ml/data/`, then run:
@@ -146,12 +187,15 @@ backend/
     models/     # Pydantic response schemas
     data/       # trained model, airport list, demo fixtures, eco constants
   ml/train.py   # delay model training
+  scripts/record_demo_data.py   # records the hosted demo's sample data
 frontend/
   src/
     pages/       # Search, Results, Map, About
-    components/  # aero (design system), results, eco, map, search
-    api/         # typed API client (+ mock mode)
+    components/  # aero (design system), results, eco, map, search, demo
+    api/         # typed API client; demoData.ts serves recorded data in demo mode
+    mocks/demo/  # recorded sample data for the demo
     types/       # TypeScript mirror of the API contract
+  vercel.json    # hosted demo build settings
 docs/screenshots/
 ```
 
@@ -162,4 +206,5 @@ Contributors (human or AI) should read [`AGENTS.md`](AGENTS.md) first. It covers
 ## Notes
 
 - Delay forecasts and emissions are **estimates** to help you plan. They aren't guarantees, and FlightGuard isn't affiliated with any airline.
+- In the hosted demo, flights and map planes are a recorded snapshot. Their statuses (landed, in the air and so on) reflect when the data was captured, not the current time.
 - FlightGuard currently covers **US passenger airlines** and flights to or from US airports.
