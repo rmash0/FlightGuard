@@ -28,9 +28,9 @@
 
 /* Clownfish orange */
 :root[data-theme='aquarium'] .theme-toggle {
-  color: #ff9a3c;
+  color: #ff8a1f;
   background-image:
-    radial-gradient(circle at 35% 25%, rgba(220, 255, 255, 0.45), rgba(220, 255, 255, 0) 55%),
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 55%),
     linear-gradient(180deg, var(--aero-glass-strong), var(--aero-glass-bg));
 }
 

@@ -168,12 +168,12 @@
   background: repeating-linear-gradient(
     105deg,
     transparent 0 90px,
-    rgba(255, 255, 255, 0.09) 90px 150px,
+    rgba(255, 255, 255, 0.24) 90px 150px,
     transparent 150px 280px
   );
   /* Prefixed first: the build minifier keeps only the last of the pair. */
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
-  mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 75%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 75%);
   animation: ray-shimmer 14s ease-in-out infinite alternate;
   transition: opacity 0.6s ease;
 }
@@ -187,18 +187,42 @@
   }
 }
 
+/* Soft colored light spots (bokeh) drifting in the water */
+.sky-background__bokeh {
+  position: absolute;
+  inset: 0;
+  opacity: var(--aero-bokeh-opacity);
+  background-image:
+    radial-gradient(circle at 18% 26%, rgba(255, 255, 255, 0.55) 0 26px, transparent 60px),
+    radial-gradient(circle at 76% 18%, rgba(200, 255, 140, 0.45) 0 34px, transparent 80px),
+    radial-gradient(circle at 62% 60%, rgba(255, 170, 230, 0.35) 0 22px, transparent 56px),
+    radial-gradient(circle at 30% 72%, rgba(255, 245, 160, 0.4) 0 30px, transparent 70px),
+    radial-gradient(circle at 90% 70%, rgba(255, 255, 255, 0.45) 0 18px, transparent 46px),
+    radial-gradient(circle at 46% 36%, rgba(140, 240, 255, 0.5) 0 40px, transparent 90px);
+  animation: bokeh-drift 18s ease-in-out infinite alternate;
+  transition: opacity 0.6s ease;
+}
+
+@keyframes bokeh-drift {
+  from {
+    transform: translate3d(-20px, 10px, 0);
+  }
+  to {
+    transform: translate3d(20px, -14px, 0);
+  }
+}
+
 .seabed__dune-back {
-  fill: rgba(232, 214, 160, 0.55);
+  fill: rgba(255, 240, 190, 0.75);
 }
 
 .seabed__rocks {
-  fill: #4f7f92;
+  fill: #7cc4cf;
 }
 
 .seabed__seaweed path {
   fill: none;
-  stroke: url(#seabed-weed);
-  stroke-width: 9;
+  stroke-width: 11;
   stroke-linecap: round;
   animation: seaweed-sway ease-in-out infinite alternate;
 }
@@ -214,25 +238,51 @@
 
 .seabed__coral path {
   fill: none;
-  stroke-width: 9;
+  stroke-width: 10;
   stroke-linecap: round;
 }
 
 .seabed__coral--pink path {
-  stroke: #ff7f9e;
+  stroke: #ff5fa2;
+}
+
+.seabed__coral--orange path {
+  stroke: #ff7a45;
 }
 
 .seabed__coral--purple path {
-  stroke: #b07cff;
-  stroke-width: 6;
+  stroke: #b36bff;
+  stroke-width: 7;
+}
+
+.seabed__brain-lines {
+  fill: none;
+  stroke: #e09a00;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .seabed__tubes {
-  fill: #ffae4a;
+  fill: #ffa63a;
+}
+
+.seabed__anemone path {
+  fill: none;
+  stroke: #ff7ac8;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform-origin: 880px 222px;
+  animation: seaweed-sway 3.6s ease-in-out infinite alternate;
+}
+
+.seabed__shells {
+  fill: #ffd6e8;
+  stroke: #f5a6c8;
+  stroke-width: 1.5;
 }
 
 .seabed__starfish {
-  fill: #ff8a5c;
+  fill: #ff6a3d;
 }
 
 /* Fish */
@@ -285,6 +335,25 @@
   --fish-tail: #f7d320;
 }
 
+/* Royal gramma: purple front, yellow back (body uses a split gradient) */
+.sea-fish__body--gramma {
+  --fish-light: #c98bff;
+  --fish-dark: #8a3bf0;
+  --fish-tail: #ffd23f;
+}
+
+.sea-fish__body--chromis {
+  --fish-light: #9dffc8;
+  --fish-dark: #12b886;
+  --fish-tail: #4fe0a8;
+}
+
+.sea-fish__body--pink {
+  --fish-light: #ffb3e0;
+  --fish-dark: #ff4fa3;
+  --fish-tail: #ff7ac0;
+}
+
 @keyframes swim-right {
   from {
     transform: translateX(-15vw);
@@ -320,6 +389,8 @@
   .skyline__rotor,
   .skyline__beacon,
   .sky-background__rays,
+  .sky-background__bokeh,
+  .seabed__anemone path,
   .seabed__seaweed path,
   .sea-fish__bob {
     animation: none;

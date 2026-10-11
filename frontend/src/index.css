@@ -65,6 +65,7 @@
   --aero-stars-opacity: 0;
   --aero-moon-opacity: 0;
   --aero-rays-opacity: 0;
+  --aero-bokeh-opacity: 0;
 
   /* Skyline: glassy blue-white towers by day */
   --aero-skyline-back: rgba(255, 255, 255, 0.42);
@@ -130,46 +131,52 @@
 }
 
 :root[data-theme='aquarium'] {
-  /* Underwater: sunlit surface fading to deep teal, seabed instead of skyline */
-  --aero-text: #e6fbff;
-  --aero-text-muted: #a3dbe6;
-  --aero-heading: #f2feff;
-  --aero-heading-glow: 0 0 16px rgba(80, 230, 230, 0.45);
-  --aero-link: #8ff0ff;
+  /*
+   * Bright tropical aquarium: sunlit turquoise water, white light from the surface,
+   * colorful reef along the bottom. Light glass with dark teal text, like the day theme.
+   */
+  --aero-text: #053b4c;
+  --aero-text-muted: #2c6b7c;
+  --aero-heading: #023243;
+  --aero-heading-glow: 0 1px 0 rgba(255, 255, 255, 0.75);
+  --aero-link: #00739a;
 
-  --aero-accent: #3fe0e0;
-  --aero-accent-strong: #14b8c8;
+  --aero-accent: #00c2d1;
+  --aero-accent-strong: #009cb3;
 
-  /* Coral replaces the generic warm accent so badges feel reef-like */
-  --aero-coral: #ff7a6b;
+  /* Reef pink replaces the generic coral so badges feel tropical */
+  --aero-coral: #ff5f8f;
 
-  --aero-glass-bg: rgba(8, 84, 112, 0.38);
-  --aero-glass-strong: rgba(30, 130, 160, 0.5);
-  --aero-glass-border: rgba(160, 245, 255, 0.35);
-  --aero-glass-inner: rgba(190, 250, 255, 0.3);
-  --aero-gloss: linear-gradient(180deg, rgba(200, 250, 255, 0.22), rgba(200, 250, 255, 0));
-  --aero-shadow: 0 10px 34px rgba(0, 30, 50, 0.45);
-  --aero-focus: 0 0 0 3px rgba(63, 224, 224, 0.6);
+  --aero-glass-bg: rgba(225, 255, 255, 0.4);
+  --aero-glass-strong: rgba(255, 255, 255, 0.58);
+  --aero-glass-border: rgba(255, 255, 255, 0.85);
+  --aero-glass-inner: rgba(255, 255, 255, 0.95);
+  --aero-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
+  --aero-shadow: 0 10px 34px rgba(0, 110, 130, 0.25);
+  --aero-focus: 0 0 0 3px rgba(0, 194, 209, 0.55);
 
-  --aero-gel-primary-top: #6ff2f0;
-  --aero-gel-primary-bottom: #0a8fb0;
-  --aero-gel-primary-border: rgba(120, 240, 245, 0.5);
-  --aero-gel-primary-glow: rgba(63, 224, 224, 0.4);
-  --aero-gel-eco-top: #8ff0a8;
-  --aero-gel-eco-bottom: #1d8f62;
-  --aero-gel-eco-border: rgba(120, 240, 180, 0.45);
-  --aero-gel-eco-glow: rgba(60, 230, 170, 0.35);
+  --aero-gel-primary-top: #85fbff;
+  --aero-gel-primary-bottom: #00a8c4;
+  --aero-gel-primary-border: rgba(0, 120, 145, 0.5);
+  --aero-gel-primary-glow: rgba(0, 210, 225, 0.45);
+  --aero-gel-eco-top: #b8f76c;
+  --aero-gel-eco-bottom: #36ad2a;
+  --aero-gel-eco-border: rgba(30, 120, 30, 0.5);
+  --aero-gel-eco-glow: rgba(120, 220, 60, 0.45);
 
   --aero-bg:
-    radial-gradient(ellipse at 50% -12%, rgba(220, 255, 255, 0.55), transparent 45%),
-    radial-gradient(ellipse at 15% 70%, rgba(20, 200, 190, 0.18), transparent 55%),
-    linear-gradient(180deg, #34c8e6 0%, #0f8db8 30%, #075a86 62%, #04324f 100%);
+    radial-gradient(ellipse at 50% -8%, rgba(255, 255, 255, 0.95), transparent 38%),
+    radial-gradient(ellipse at 12% 38%, rgba(130, 255, 215, 0.45), transparent 42%),
+    radial-gradient(ellipse at 88% 52%, rgba(90, 210, 255, 0.4), transparent 45%),
+    radial-gradient(ellipse at 60% 95%, rgba(255, 255, 210, 0.35), transparent 40%),
+    linear-gradient(180deg, #c4fdff 0%, #6ff3f2 16%, #2adfe4 42%, #14c3dc 72%, #0aa5d0 100%);
   --aero-bubble-opacity: 0.95;
   --aero-stars-opacity: 0;
   --aero-moon-opacity: 0;
   --aero-rays-opacity: 1;
+  --aero-bokeh-opacity: 1;
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 *,

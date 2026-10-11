@@ -23,6 +23,7 @@ function SkyBackground() {
       <div className="sky-background__stars" />
       <div className="sky-background__moon" />
       <div className="sky-background__rays" />
+      <div className="sky-background__bokeh" />
       <Skyline />
       <SeaLife />
       <Seabed />
