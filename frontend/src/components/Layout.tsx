@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useMatch } from "react-router";
 
-import { APP_NAME } from "../config";
+import { APP_NAME, USE_SAMPLE_DATA } from "../config";
+import AeroBadge from "./aero/AeroBadge";
 import GlassPanel from "./aero/GlassPanel";
 import SkyBackground from "./aero/SkyBackground";
 import ThemeToggle from "./aero/ThemeToggle";
@@ -18,6 +19,11 @@ function Layout() {
         <NavLink to="/" className="app-brand">
           <img src="/favicon.svg" alt="" width="32" height="32" />
           {APP_NAME}
+          {USE_SAMPLE_DATA && (
+            <span className="app-brand__demo" title="Running on recorded sample data, no live APIs">
+              <AeroBadge tone="amber">Demo</AeroBadge>
+            </span>
+          )}
         </NavLink>
 
         <nav className="app-nav" aria-label="Main">

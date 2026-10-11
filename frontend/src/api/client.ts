@@ -1,27 +1,17 @@
 // Single entry point for backend calls. Components never call fetch directly.
-// Set VITE_USE_MOCKS=true in frontend/.env.local to serve src/mocks/*.json instead of the backend.
+// In demo mode (USE_SAMPLE_DATA, see config.ts) every call is answered from recorded sample
+// data in ./demoData instead of the backend. That module is imported lazily, so normal
+// builds never download it.
 
-import lookupMock from "../mocks/lookup.json";
-import liveDetailsMock from "../mocks/live-details.json";
-import airportStatusMock from "../mocks/airport-status.json";
-import type { AirportStatus, FlightLookupResponse, LiveFlightDetails } from "../types/api";
-import type { LiveAircraft } from "../components/map/PlaneMarker";
 import type { MapAirport } from "../components/map/AirportMarker";
+import type { LiveAircraft } from "../components/map/PlaneMarker";
+import { USE_SAMPLE_DATA } from "../config";
+import type { AirportStatus, FlightLookupResponse, LiveFlightDetails } from "../types/api";
+import { ApiError } from "./errors";
 
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
-const MOCK_LATENCY_MS = 400;
+export { ApiError, NOT_IN_DEMO } from "./errors";
 
-export class ApiError extends Error {
-  readonly status: number;
-  readonly detail: string | null;
-
-  constructor(message: string, status: number, detail: string | null = null) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.detail = detail;
-  }
-}
+const DEMO_LATENCY_MS = 400;
 
 async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, { signal });
@@ -41,57 +31,16 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   return (await response.json()) as T;
 }
 
-// Fake network delay so loading states get exercised while using mocks.
-function mockDelay(signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, MOCK_LATENCY_MS);
+// Loads the demo data module after a short fake delay, so loading states still show.
+async function demo(signal?: AbortSignal) {
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(resolve, DEMO_LATENCY_MS);
     signal?.addEventListener("abort", () => {
       clearTimeout(timer);
       reject(signal.reason);
     });
   });
-}
-
-// Mock-only test flights for previewing every results-page state:
-// ZZ404 / ZZ502 / ZZ503 -> that API error, ZZ1 -> no prediction or emissions,
-// ZZ2 -> a delayed flight with high risk. Any other number returns the sample flight.
-const MOCK_ERROR_FLIGHTS: Record<string, number> = {
-  ZZ404: 404,
-  ZZ502: 502,
-  ZZ503: 503,
-};
-
-function mockLookup(number: string, date: string): FlightLookupResponse {
-  if (number in MOCK_ERROR_FLIGHTS) {
-    throw new ApiError(`Mock error for ${number}`, MOCK_ERROR_FLIGHTS[number]);
-  }
-
-  const mock = lookupMock as FlightLookupResponse;
-  const response = { ...mock, flight: { ...mock.flight, number, date } };
-
-  if (number === "ZZ1") {
-    return { ...response, prediction: null, emissions: null };
-  }
-
-  if (number === "ZZ2") {
-    return {
-      ...response,
-      flight: {
-        ...response.flight,
-        status: "delayed",
-        estimated_departure: `${date}T14:50:00-04:00`,
-      },
-      prediction: mock.prediction && {
-        ...mock.prediction,
-        risk: "high",
-        probability_delayed: 0.82,
-        estimated_delay_minutes: 48,
-        reported_delay_minutes: 45,
-      },
-    };
-  }
-
-  return response;
+  return import("./demoData");
 }
 
 export async function lookupFlight(
@@ -99,9 +48,8 @@ export async function lookupFlight(
   date: string,
   signal?: AbortSignal,
 ): Promise<FlightLookupResponse> {
-  if (USE_MOCKS) {
-    await mockDelay(signal);
-    return mockLookup(number, date);
+  if (USE_SAMPLE_DATA) {
+    return (await demo(signal)).lookupFlight(number, date);
   }
 
   const params = new URLSearchParams({ number, date });
@@ -124,12 +72,8 @@ export async function getLiveAircraft(
   bounds: MapBounds,
   signal?: AbortSignal,
 ): Promise<LiveAircraftResponse> {
-  if (USE_MOCKS) {
-    await mockDelay(signal);
-    return {
-      updated_at: null,
-      flights: [],
-    };
+  if (USE_SAMPLE_DATA) {
+    return (await demo(signal)).getLiveAircraft(bounds);
   }
 
   const params = new URLSearchParams({
@@ -147,9 +91,8 @@ export async function getLiveFlightDetails(
   callsign: string,
   signal?: AbortSignal,
 ): Promise<LiveFlightDetails> {
-  if (USE_MOCKS) {
-    await mockDelay(signal);
-    return liveDetailsMock as LiveFlightDetails;
+  if (USE_SAMPLE_DATA) {
+    return (await demo(signal)).getLiveFlightDetails(icao24);
   }
 
   const params = new URLSearchParams({ callsign });
@@ -162,9 +105,8 @@ export async function getLiveFlightDetails(
 export async function getMapAirports(
   signal?: AbortSignal,
 ): Promise<MapAirport[]> {
-  if (USE_MOCKS) {
-    await mockDelay(signal);
-    return [];
+  if (USE_SAMPLE_DATA) {
+    return (await demo(signal)).getMapAirports();
   }
 
   const data = await getJson<MapAirport[] | { airports: MapAirport[] }>(
@@ -179,10 +121,17 @@ export async function getAirportStatus(
   iata: string,
   signal?: AbortSignal,
 ): Promise<AirportStatus> {
-  if (USE_MOCKS) {
-    await mockDelay(signal);
-    return { ...(airportStatusMock as AirportStatus), iata };
+  if (USE_SAMPLE_DATA) {
+    return (await demo(signal)).getAirportStatus(iata);
   }
 
   return getJson<AirportStatus>(`/api/airports/${encodeURIComponent(iata)}`, signal);
+}
+
+// Recorded sample flights for the demo's "try a flight" lists. Empty outside demo mode.
+export async function getDemoFlights() {
+  if (!USE_SAMPLE_DATA) {
+    return [];
+  }
+  return (await import("./demoData")).getDemoFlightSummaries();
 }

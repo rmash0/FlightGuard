@@ -1,6 +1,8 @@
 import GlassPanel from "../components/aero/GlassPanel";
+import DemoFlightList from "../components/demo/DemoFlightList";
 import FeatureList from "../components/features/FeatureList";
 import FlightSearchForm from "../components/search/FlightSearchForm";
+import { USE_SAMPLE_DATA } from "../config";
 import "./SearchPage.css";
 
 function SearchPage() {
@@ -15,6 +17,8 @@ function SearchPage() {
       </GlassPanel>
 
       <FeatureList variant="compact" />
+
+      {USE_SAMPLE_DATA && <DemoFlightList />}
     </>
   );
 }

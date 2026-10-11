@@ -1,9 +1,10 @@
 import { Link, Navigate, useParams } from "react-router";
 
-import { ApiError } from "../api/client";
+import { ApiError, NOT_IN_DEMO } from "../api/client";
 import AeroButton from "../components/aero/AeroButton";
 import GlassPanel from "../components/aero/GlassPanel";
 import { aeroButtonClass } from "../components/aero/classes";
+import DemoFlightList from "../components/demo/DemoFlightList";
 import EmissionsCard from "../components/eco/EmissionsCard";
 import DelayGauge from "../components/results/DelayGauge";
 import FlightSummary from "../components/results/FlightSummary";
@@ -39,6 +40,15 @@ function ResultsMessage({ title, message, onRetry }: ResultsMessageProps) {
 function describeError(error: unknown, number: string, date: string) {
   const status = error instanceof ApiError ? error.status : null;
   const detail = error instanceof ApiError ? error.detail : null;
+
+  if (detail === NOT_IN_DEMO) {
+    return {
+      title: `${number} isn't in this demo`,
+      message:
+        "The demo includes a set of real flights recorded from live data. Pick one below, or run FlightGuard with your own API keys to search any US flight.",
+      retryable: false,
+    };
+  }
 
   switch (status) {
     case 404:
@@ -102,7 +112,13 @@ function FlightResults({ number, date }: { number: string; date: string }) {
 
   if (state.status === "error") {
     const { title, message, retryable } = describeError(state.error, number, date);
-    return <ResultsMessage title={title} message={message} onRetry={retryable ? retry : undefined} />;
+    const notInDemo = state.error instanceof ApiError && state.error.detail === NOT_IN_DEMO;
+    return (
+      <>
+        <ResultsMessage title={title} message={message} onRetry={retryable ? retry : undefined} />
+        {notInDemo && <DemoFlightList intro="These flights are included in the demo:" />}
+      </>
+    );
   }
 
   const { flight, prediction, emissions } = state.data;

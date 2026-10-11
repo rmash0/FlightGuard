@@ -124,3 +124,10 @@
     padding: 22px 0 max(28px, env(safe-area-inset-bottom));
   }
 }
+
+/* "Demo" badge next to the app name when running on sample data */
+.app-brand__demo {
+  display: inline-flex;
+  font-size: 0.8rem;
+  text-shadow: none;
+}
