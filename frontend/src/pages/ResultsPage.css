@@ -11,6 +11,7 @@
   margin-top: 20px;
 }
 
+<<<<<<< HEAD
 .results-grid > * {
   min-width: 0;
 }
@@ -20,6 +21,8 @@
   margin: 0;
 }
 
+=======
+>>>>>>> 4a96a0c6c50c420d4032f4bed7adad9bcc059301
 .results-panel h2 {
   margin-bottom: 16px;
 }
