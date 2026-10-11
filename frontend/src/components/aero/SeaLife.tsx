@@ -1,0 +1,74 @@
+// Glossy fish swimming across the screen in the aquarium theme.
+
+type FishKind = "clown" | "tang" | "yellow";
+
+// Deterministic school: vertical position, size, swim duration/delay and direction.
+const FISH: Array<{
+  kind: FishKind;
+  top: string;
+  size: number;
+  duration: number;
+  delay: number;
+  leftward: boolean;
+}> = [
+  { kind: "clown", top: "24%", size: 56, duration: 34, delay: -6, leftward: false },
+  { kind: "tang", top: "42%", size: 72, duration: 46, delay: -22, leftward: true },
+  { kind: "yellow", top: "58%", size: 44, duration: 28, delay: -14, leftward: false },
+  { kind: "clown", top: "68%", size: 38, duration: 30, delay: -2, leftward: true },
+  { kind: "tang", top: "16%", size: 40, duration: 40, delay: -30, leftward: false },
+];
+
+function Fish({ kind }: { kind: FishKind }) {
+  return (
+    <svg viewBox="0 0 64 40" className={`sea-fish__body sea-fish__body--${kind}`}>
+      <defs>
+        <radialGradient id={`fish-${kind}`} cx="40%" cy="35%" r="70%">
+          <stop offset="0" stopColor="var(--fish-light)" />
+          <stop offset="1" stopColor="var(--fish-dark)" />
+        </radialGradient>
+      </defs>
+      {/* Tail */}
+      <path d="M12 20 L0 6 L3 20 L0 34 Z" fill="var(--fish-tail)" />
+      {/* Body */}
+      <ellipse cx="34" cy="20" rx="24" ry="15" fill={`url(#fish-${kind})`} />
+      {kind === "clown" && (
+        <g fill="#fff" opacity="0.95">
+          <path d="M24 6.5 Q28 20 24 33.5 L29 34.8 Q32.5 20 29 5.2 Z" />
+          <path d="M42 6 Q45 20 42 34 L46 33 Q48.5 20 46 7 Z" />
+        </g>
+      )}
+      {/* Fin */}
+      <path d="M30 8 Q36 0 44 7 Z" fill="var(--fish-tail)" opacity="0.85" />
+      {/* Eye */}
+      <circle cx="49" cy="17" r="3.6" fill="#fff" />
+      <circle cx="50" cy="17" r="1.9" fill="#0b2233" />
+      {/* Gloss */}
+      <ellipse cx="36" cy="11" rx="13" ry="4" fill="#fff" opacity="0.45" />
+    </svg>
+  );
+}
+
+function SeaLife() {
+  return (
+    <div className="sea-life" aria-hidden="true">
+      {FISH.map((fish, i) => (
+        <div
+          key={i}
+          className={`sea-fish${fish.leftward ? " sea-fish--leftward" : ""}`}
+          style={{
+            top: fish.top,
+            width: fish.size,
+            animationDuration: `${fish.duration}s`,
+            animationDelay: `${fish.delay}s`,
+          }}
+        >
+          <div className="sea-fish__bob">
+            <Fish kind={fish.kind} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default SeaLife;

@@ -26,6 +26,14 @@
     linear-gradient(180deg, var(--aero-glass-strong), var(--aero-glass-bg));
 }
 
+/* Clownfish orange */
+:root[data-theme='aquarium'] .theme-toggle {
+  color: #ff9a3c;
+  background-image:
+    radial-gradient(circle at 35% 25%, rgba(220, 255, 255, 0.45), rgba(220, 255, 255, 0) 55%),
+    linear-gradient(180deg, var(--aero-glass-strong), var(--aero-glass-bg));
+}
+
 .theme-toggle:hover {
   transform: rotate(-15deg) scale(1.06);
 }

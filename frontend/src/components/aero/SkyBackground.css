@@ -80,9 +80,10 @@
   transition: opacity 0.6s ease;
 }
 
-/* Skyline */
+/* Skyline (and the aquarium seabed, which shares its size and placement) */
 
-.skyline {
+.skyline,
+.seabed {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -143,13 +144,194 @@
   }
 }
 
+/* Aquarium theme: swap skyline for the underwater scene */
+
+.seabed,
+.sea-life {
+  display: none;
+}
+
+:root[data-theme='aquarium'] .skyline {
+  display: none;
+}
+
+:root[data-theme='aquarium'] .seabed,
+:root[data-theme='aquarium'] .sea-life {
+  display: block;
+}
+
+/* Sunlight rays from the surface */
+.sky-background__rays {
+  position: absolute;
+  inset: 0;
+  opacity: var(--aero-rays-opacity);
+  background: repeating-linear-gradient(
+    105deg,
+    transparent 0 90px,
+    rgba(255, 255, 255, 0.09) 90px 150px,
+    transparent 150px 280px
+  );
+  /* Prefixed first: the build minifier keeps only the last of the pair. */
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+  animation: ray-shimmer 14s ease-in-out infinite alternate;
+  transition: opacity 0.6s ease;
+}
+
+@keyframes ray-shimmer {
+  from {
+    transform: translateX(-40px);
+  }
+  to {
+    transform: translateX(40px);
+  }
+}
+
+.seabed__dune-back {
+  fill: rgba(232, 214, 160, 0.55);
+}
+
+.seabed__rocks {
+  fill: #4f7f92;
+}
+
+.seabed__seaweed path {
+  fill: none;
+  stroke: url(#seabed-weed);
+  stroke-width: 9;
+  stroke-linecap: round;
+  animation: seaweed-sway ease-in-out infinite alternate;
+}
+
+@keyframes seaweed-sway {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+
+.seabed__coral path {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.seabed__coral--pink path {
+  stroke: #ff7f9e;
+}
+
+.seabed__coral--purple path {
+  stroke: #b07cff;
+  stroke-width: 6;
+}
+
+.seabed__tubes {
+  fill: #ffae4a;
+}
+
+.seabed__starfish {
+  fill: #ff8a5c;
+}
+
+/* Fish */
+
+.sea-life {
+  position: absolute;
+  inset: 0;
+}
+
+.sea-fish {
+  position: absolute;
+  left: 0;
+  animation: swim-right linear infinite;
+}
+
+.sea-fish--leftward {
+  animation-name: swim-left;
+}
+
+.sea-fish--leftward .sea-fish__body {
+  transform: scaleX(-1);
+}
+
+.sea-fish__bob {
+  animation: fish-bob 3.2s ease-in-out infinite alternate;
+}
+
+.sea-fish__body {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 4px 6px rgba(0, 30, 50, 0.25));
+}
+
+.sea-fish__body--clown {
+  --fish-light: #ffb35c;
+  --fish-dark: #f26a10;
+  --fish-tail: #f57d1f;
+}
+
+.sea-fish__body--tang {
+  --fish-light: #6fb8ff;
+  --fish-dark: #1f4fd6;
+  --fish-tail: #ffd23f;
+}
+
+.sea-fish__body--yellow {
+  --fish-light: #fff27a;
+  --fish-dark: #f2c200;
+  --fish-tail: #f7d320;
+}
+
+@keyframes swim-right {
+  from {
+    transform: translateX(-15vw);
+  }
+  to {
+    transform: translateX(115vw);
+  }
+}
+
+@keyframes swim-left {
+  from {
+    transform: translateX(115vw);
+  }
+  to {
+    transform: translateX(-15vw);
+  }
+}
+
+@keyframes fish-bob {
+  from {
+    transform: translateY(-8px);
+  }
+  to {
+    transform: translateY(8px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sky-background__bubble {
     display: none;
   }
 
   .skyline__rotor,
-  .skyline__beacon {
+  .skyline__beacon,
+  .sky-background__rays,
+  .seabed__seaweed path,
+  .sea-fish__bob {
     animation: none;
+  }
+
+  /* Park the fish in place instead of swimming */
+  .sea-fish {
+    animation: none;
+    transform: translateX(20vw);
+  }
+
+  .sea-fish--leftward {
+    transform: translateX(70vw);
   }
 }

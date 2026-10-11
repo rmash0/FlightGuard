@@ -2,13 +2,26 @@ import { useEffect, useState } from "react";
 
 import "./ThemeToggle.css";
 
-type Theme = "light" | "dark";
+// Clicking the toggle cycles through themes in this order.
+const THEMES = ["light", "dark", "aquarium"] as const;
+type Theme = (typeof THEMES)[number];
+
+const THEME_LABELS: Record<Theme, string> = {
+  light: "Day",
+  dark: "Night",
+  aquarium: "Aquarium",
+};
 
 // Same key as the pre-render script in index.html.
 const STORAGE_KEY = "theme";
 
+function isTheme(value: string | undefined | null): value is Theme {
+  return THEMES.includes(value as Theme);
+}
+
 function readTheme(): Theme {
-  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  const current = document.documentElement.dataset.theme;
+  return isTheme(current) ? current : "light";
 }
 
 function readSavedTheme(): string | null {
@@ -21,13 +34,13 @@ function readSavedTheme(): string | null {
 
 function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(readTheme);
-  const nextTheme: Theme = theme === "dark" ? "light" : "dark";
+  const nextTheme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
-  // Follow the OS setting until the user picks a theme themselves.
+  // Follow the OS light/dark setting until the user picks a theme themselves.
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (event: MediaQueryListEvent) => {
@@ -49,15 +62,19 @@ function ThemeToggle() {
     }
   }
 
+  const label = `${THEME_LABELS[theme]} theme. Switch to ${THEME_LABELS[nextTheme].toLowerCase()}`;
+
   return (
     <button
       type="button"
       className="theme-toggle"
       onClick={handleClick}
-      aria-label={`Switch to ${nextTheme} mode`}
-      title={`Switch to ${nextTheme} mode`}
+      aria-label={label}
+      title={label}
     >
-      {theme === "dark" ? <MoonIcon /> : <SunIcon />}
+      {theme === "dark" && <MoonIcon />}
+      {theme === "light" && <SunIcon />}
+      {theme === "aquarium" && <FishIcon />}
     </button>
   );
 }
@@ -80,6 +97,18 @@ function MoonIcon() {
         fill="currentColor"
         d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"
       />
+    </svg>
+  );
+}
+
+function FishIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M3 12c3-5 9-6.5 13-3.5L20 5v14l-4-3.5C12 18.5 6 17 3 12z"
+      />
+      <circle cx="7.5" cy="11" r="1.2" fill="#fff" />
     </svg>
   );
 }

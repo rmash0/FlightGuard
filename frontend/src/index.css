@@ -1,6 +1,6 @@
 /*
  * Frutiger Aero design tokens. Use var(--aero-*) everywhere; never hard-code colors.
- * Theme is set on <html data-theme="light|dark"> by the script in index.html and ThemeToggle.
+ * Theme is set on <html data-theme="light|dark|aquarium"> by the script in index.html and ThemeToggle.
  */
 
 :root {
@@ -64,6 +64,7 @@
   --aero-bubble-opacity: 0.85;
   --aero-stars-opacity: 0;
   --aero-moon-opacity: 0;
+  --aero-rays-opacity: 0;
 
   /* Skyline: glassy blue-white towers by day */
   --aero-skyline-back: rgba(255, 255, 255, 0.42);
@@ -124,6 +125,49 @@
   --aero-skyline-detail: #8fa6cf;
   --aero-skyline-hill: #081a2e;
   --aero-beacon-opacity: 1;
+
+  color-scheme: dark;
+}
+
+:root[data-theme='aquarium'] {
+  /* Underwater: sunlit surface fading to deep teal, seabed instead of skyline */
+  --aero-text: #e6fbff;
+  --aero-text-muted: #a3dbe6;
+  --aero-heading: #f2feff;
+  --aero-heading-glow: 0 0 16px rgba(80, 230, 230, 0.45);
+  --aero-link: #8ff0ff;
+
+  --aero-accent: #3fe0e0;
+  --aero-accent-strong: #14b8c8;
+
+  /* Coral replaces the generic warm accent so badges feel reef-like */
+  --aero-coral: #ff7a6b;
+
+  --aero-glass-bg: rgba(8, 84, 112, 0.38);
+  --aero-glass-strong: rgba(30, 130, 160, 0.5);
+  --aero-glass-border: rgba(160, 245, 255, 0.35);
+  --aero-glass-inner: rgba(190, 250, 255, 0.3);
+  --aero-gloss: linear-gradient(180deg, rgba(200, 250, 255, 0.22), rgba(200, 250, 255, 0));
+  --aero-shadow: 0 10px 34px rgba(0, 30, 50, 0.45);
+  --aero-focus: 0 0 0 3px rgba(63, 224, 224, 0.6);
+
+  --aero-gel-primary-top: #6ff2f0;
+  --aero-gel-primary-bottom: #0a8fb0;
+  --aero-gel-primary-border: rgba(120, 240, 245, 0.5);
+  --aero-gel-primary-glow: rgba(63, 224, 224, 0.4);
+  --aero-gel-eco-top: #8ff0a8;
+  --aero-gel-eco-bottom: #1d8f62;
+  --aero-gel-eco-border: rgba(120, 240, 180, 0.45);
+  --aero-gel-eco-glow: rgba(60, 230, 170, 0.35);
+
+  --aero-bg:
+    radial-gradient(ellipse at 50% -12%, rgba(220, 255, 255, 0.55), transparent 45%),
+    radial-gradient(ellipse at 15% 70%, rgba(20, 200, 190, 0.18), transparent 55%),
+    linear-gradient(180deg, #34c8e6 0%, #0f8db8 30%, #075a86 62%, #04324f 100%);
+  --aero-bubble-opacity: 0.95;
+  --aero-stars-opacity: 0;
+  --aero-moon-opacity: 0;
+  --aero-rays-opacity: 1;
 
   color-scheme: dark;
 }
