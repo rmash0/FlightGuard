@@ -11,6 +11,10 @@
   margin-top: 20px;
 }
 
+.results-grid > * {
+  min-width: 0;
+}
+
 /* Grid handles spacing; cancel the stacked-panel margin from GlassPanel.css */
 .results-grid > .glass-panel {
   margin: 0;
@@ -70,6 +74,13 @@
 @media (max-width: 760px) {
   .results-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .results-message__actions > * {
+    width: 100%;
+    min-height: 44px;
   }
 }
 

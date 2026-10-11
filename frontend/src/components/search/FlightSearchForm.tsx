@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 
 import AeroButton from "../aero/AeroButton";
+import AeroDateInput from "../aero/AeroDateInput";
 import AeroInput from "../aero/AeroInput";
 import { cx } from "../aero/classes";
 import {
@@ -82,10 +83,9 @@ function FlightSearchForm({
           <label htmlFor="flight-date" className={cx(compact && "visually-hidden")}>
             Date
           </label>
-          <AeroInput
+          <AeroDateInput
             id="flight-date"
             name="date"
-            type="date"
             value={date}
             min={range.min}
             max={range.max}

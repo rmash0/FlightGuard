@@ -10,6 +10,7 @@ import AirportMarker from "./AirportMarker";
 import type { MapAirport } from "./AirportMarker";
 
 import "leaflet/dist/leaflet.css";
+import "./FlightMap.css";
 
 export type MapBounds = {
   lamin: number;
@@ -85,11 +86,10 @@ function FlightMap({
 }: FlightMapProps) {
   return (
     <div
+      className="flight-map"
       style={{
         position: "relative",
         width: "100%",
-        height: "min(70vh, 650px)",
-        minHeight: 400,
         borderRadius: "var(--aero-radius-lg)",
         overflow: "hidden",
         border: "1px solid var(--aero-glass-border)",
@@ -126,15 +126,13 @@ function FlightMap({
       </MapContainer>
 
       <div
+        className="flight-map__count"
         style={{
           position: "absolute",
-          top: 16,
-          right: 16,
           zIndex: 1000,
           display: "flex",
           alignItems: "center",
           gap: 8,
-          padding: "10px 14px",
           borderRadius: "var(--aero-radius-pill)",
           background: "var(--aero-glass-strong)",
           border: "1px solid var(--aero-glass-border)",
@@ -153,14 +151,11 @@ function FlightMap({
 
       {error && (
         <div
+          className="flight-map__error"
           role="alert"
           style={{
             position: "absolute",
-            bottom: 32,
-            left: "50%",
-            transform: "translateX(-50%)",
             zIndex: 1000,
-            padding: "12px 20px",
             borderRadius: "var(--aero-radius-md)",
             background: "var(--aero-glass-strong)",
             border: "1px solid var(--aero-glass-border)",
@@ -177,15 +172,12 @@ function FlightMap({
       )}
 
       <div
+        className="flight-map__credit"
         style={{
           position: "absolute",
-          bottom: 16,
-          right: 16,
           zIndex: 1000,
-          display: "flex",
           alignItems: "center",
           gap: 6,
-          padding: "7px 12px",
           borderRadius: "var(--aero-radius-pill)",
           background: "var(--aero-glass-strong)",
           border: "1px solid var(--aero-glass-border)",
