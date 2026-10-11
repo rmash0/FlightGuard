@@ -1,4 +1,4 @@
-import { CarFront, CalendarDays, Trees, Leaf } from "lucide-react";
+import { CarFront, CalendarDays, Trees, Leaf, Smartphone } from "lucide-react";
 import type { EcoComparison as EcoComparisonType } from "../../types/api";
 
 type EcoComparisonProps = {
@@ -20,6 +20,10 @@ function EcoComparison({
 
   const getIcon = (label: string) => {
     const normalized = label.toLowerCase();
+
+    if (normalized.includes("smartphone")) {
+      return <Smartphone size={24} color="var(--aero-accent)" />;
+    }
 
     if (normalized.includes("car")) {
       return <CarFront size={24} color="var(--aero-accent)" />;
@@ -58,13 +62,13 @@ function EcoComparison({
           margin: "0 0 14px",
         }}
       >
-        Environmental Equivalents
+        Environmental equivalents
       </h3>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gridTemplateColumns: "repeat(2, 1fr)",
           gap: 12,
         }}
       >

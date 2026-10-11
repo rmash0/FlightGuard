@@ -111,26 +111,27 @@ function FlightResults({ number, date }: { number: string; date: string }) {
     <>
       <FlightSummary flight={flight} />
 
-      <div className="results-grid">
-        <GlassPanel as="section" className="results-panel" aria-labelledby="delay-title">
-          <h2 id="delay-title">Delay forecast</h2>
-          {prediction ? (
-            <>
-              <DelayGauge prediction={prediction} />
+      {/* Full-width sections, each split into two halves (stack on narrow screens). */}
+      <GlassPanel as="section" className="results-panel" aria-labelledby="delay-title">
+        <h2 id="delay-title">Delay forecast</h2>
+        {prediction ? (
+          <div className="results-panel__split">
+            <DelayGauge prediction={prediction} />
+            <div className="results-panel__reasons">
               <h3 className="results-panel__subheading">Why</h3>
               <ReasonList reasons={prediction.reasons} />
               <p className="results-panel__footnote">Model: {prediction.model}</p>
-            </>
-          ) : (
-            <p className="text-muted">
-              We couldn't make a delay forecast for this flight right now.
-            </p>
-          )}
-        </GlassPanel>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted">
+            We couldn't make a delay forecast for this flight right now.
+          </p>
+        )}
+      </GlassPanel>
 
-        {/* EmissionsCard (Role D) renders its own GlassPanel and heading, including the null state. */}
-        <EmissionsCard emissions={emissions} />
-      </div>
+      {/* EmissionsCard (Role D) renders its own full-width GlassPanel and heading, including the null state. */}
+      <EmissionsCard emissions={emissions} />
     </>
   );
 }

@@ -15,9 +15,15 @@
       // Set the theme before first paint so there's no light/dark flash. Key matches ThemeToggle.
       (function () {
         var theme = 'light';
+        var themes = ['light', 'dark', 'aquarium'];
         try {
+          // ?theme=aquarium in the URL picks (and remembers) a theme, handy for demo links.
+          var requested = new URLSearchParams(window.location.search).get('theme');
+          if (themes.indexOf(requested) !== -1) {
+            localStorage.setItem('theme', requested);
+          }
           var saved = localStorage.getItem('theme');
-          if (saved === 'light' || saved === 'dark') {
+          if (themes.indexOf(saved) !== -1) {
             theme = saved;
           } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
             theme = 'dark';

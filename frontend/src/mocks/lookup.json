@@ -29,7 +29,10 @@
     "estimate_tier": "flight",
     "source": "google_tim",
     "comparisons": [
-      { "label": "km in an average gas car", "value": 230 }
+      { "label": "km in an average gas car", "value": 366.9 },
+      { "label": "days of an average American's emissions", "value": 2.1 },
+      { "label": "urban tree seedlings absorbing CO2 (annualized over 10 years)", "value": 1.5 },
+      { "label": "smartphones fully charged", "value": 7427 }
     ]
   }
 }

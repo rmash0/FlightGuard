@@ -1,6 +1,6 @@
 /*
  * Frutiger Aero design tokens. Use var(--aero-*) everywhere; never hard-code colors.
- * Theme is set on <html data-theme="light|dark"> by the script in index.html and ThemeToggle.
+ * Theme is set on <html data-theme="light|dark|aquarium"> by the script in index.html and ThemeToggle.
  */
 
 :root {
@@ -64,6 +64,8 @@
   --aero-bubble-opacity: 0.85;
   --aero-stars-opacity: 0;
   --aero-moon-opacity: 0;
+  --aero-rays-opacity: 0;
+  --aero-bokeh-opacity: 0;
 
   /* Skyline: glassy blue-white towers by day */
   --aero-skyline-back: rgba(255, 255, 255, 0.42);
@@ -126,6 +128,55 @@
   --aero-beacon-opacity: 1;
 
   color-scheme: dark;
+}
+
+:root[data-theme='aquarium'] {
+  /*
+   * Bright tropical aquarium: sunlit turquoise water, white light from the surface,
+   * colorful reef along the bottom. Light glass with dark teal text, like the day theme.
+   */
+  --aero-text: #053b4c;
+  --aero-text-muted: #2c6b7c;
+  --aero-heading: #023243;
+  --aero-heading-glow: 0 1px 0 rgba(255, 255, 255, 0.75);
+  --aero-link: #00739a;
+
+  --aero-accent: #00c2d1;
+  --aero-accent-strong: #009cb3;
+
+  /* Reef pink replaces the generic coral so badges feel tropical */
+  --aero-coral: #ff5f8f;
+
+  --aero-glass-bg: rgba(225, 255, 255, 0.4);
+  --aero-glass-strong: rgba(255, 255, 255, 0.58);
+  --aero-glass-border: rgba(255, 255, 255, 0.85);
+  --aero-glass-inner: rgba(255, 255, 255, 0.95);
+  --aero-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
+  --aero-shadow: 0 10px 34px rgba(0, 110, 130, 0.25);
+  --aero-focus: 0 0 0 3px rgba(0, 194, 209, 0.55);
+
+  --aero-gel-primary-top: #85fbff;
+  --aero-gel-primary-bottom: #00a8c4;
+  --aero-gel-primary-border: rgba(0, 120, 145, 0.5);
+  --aero-gel-primary-glow: rgba(0, 210, 225, 0.45);
+  --aero-gel-eco-top: #b8f76c;
+  --aero-gel-eco-bottom: #36ad2a;
+  --aero-gel-eco-border: rgba(30, 120, 30, 0.5);
+  --aero-gel-eco-glow: rgba(120, 220, 60, 0.45);
+
+  --aero-bg:
+    radial-gradient(ellipse at 50% -8%, rgba(255, 255, 255, 0.95), transparent 38%),
+    radial-gradient(ellipse at 12% 38%, rgba(130, 255, 215, 0.45), transparent 42%),
+    radial-gradient(ellipse at 88% 52%, rgba(90, 210, 255, 0.4), transparent 45%),
+    radial-gradient(ellipse at 60% 95%, rgba(255, 255, 210, 0.35), transparent 40%),
+    linear-gradient(180deg, #c4fdff 0%, #6ff3f2 16%, #2adfe4 42%, #14c3dc 72%, #0aa5d0 100%);
+  --aero-bubble-opacity: 0.95;
+  --aero-stars-opacity: 0;
+  --aero-moon-opacity: 0;
+  --aero-rays-opacity: 1;
+  --aero-bokeh-opacity: 1;
+
+  color-scheme: light;
 }
 
 *,
