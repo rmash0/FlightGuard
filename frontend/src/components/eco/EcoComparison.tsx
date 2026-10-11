@@ -62,13 +62,13 @@ function EcoComparison({
           margin: "0 0 14px",
         }}
       >
-        Environmental Equivalents
+        Environmental equivalents
       </h3>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gridTemplateColumns: "repeat(2, 1fr)",
           gap: 12,
         }}
       >

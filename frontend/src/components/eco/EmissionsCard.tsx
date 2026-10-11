@@ -23,18 +23,25 @@ const TIER_LABELS = {
   fallback: "Rough estimate",
 };
 
+// Centered heading matching the results page's "Delay forecast" section.
+const headingStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  margin: "0 0 4px",
+};
+
 function EmissionsCard({ emissions }: EmissionsCardProps) {
   const [selectedCabin, setSelectedCabin] = useState<CabinClass>("economy");
 
   if (!emissions) {
     return (
-      <GlassPanel as="section">
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Leaf size={28} color="var(--aero-leaf)" />
-          <h2 style={{ color: "var(--aero-heading)", margin: 0 }}>
-            Carbon Footprint
-          </h2>
-        </div>
+      <GlassPanel as="section" aria-labelledby="eco-title">
+        <h2 id="eco-title" style={headingStyle}>
+          <Leaf size={22} color="var(--aero-leaf)" />
+          Carbon footprint
+        </h2>
 
         <p style={{ color: "var(--aero-text-muted)", marginBottom: 0 }}>
           CO₂ emissions are currently unavailable for this flight.
@@ -51,185 +58,172 @@ function EmissionsCard({ emissions }: EmissionsCardProps) {
   return (
     <GlassPanel
       as="section"
+      aria-labelledby="eco-title"
       style={{
-        textAlign: "left",
         display: "flex",
         flexDirection: "column",
         gap: 24,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 12,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div
+      <div>
+        <h2 id="eco-title" style={headingStyle}>
+          <Leaf size={22} color="var(--aero-leaf)" />
+          Carbon footprint
+        </h2>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            gap: 10,
+          }}
+        >
+          <span style={{ color: "var(--aero-text-muted)", fontSize: 13 }}>
+            Environmental impact of your flight
+          </span>
+
+          <span
             style={{
-              padding: 12,
-              borderRadius: "var(--aero-radius-md)",
+              padding: "4px 12px",
+              borderRadius: "var(--aero-radius-pill)",
+              border: "1px solid var(--aero-glass-border)",
               background: "var(--aero-glass-strong)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              color: "var(--aero-text)",
+              fontSize: 12,
+              fontWeight: 600,
             }}
           >
-            <Leaf size={26} color="var(--aero-leaf)" />
-          </div>
+            {tierLabel}
+          </span>
+        </div>
+      </div>
 
-          <div>
-            <h2
+      {/* Two halves: the number and cabin picker | the equivalents. 340px minimum stacks them below ~800px wide, matching the delay section. */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+          alignItems: "center",
+          gap: 32,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div style={{ textAlign: "center" }}>
+            <div
               style={{
-                color: "var(--aero-heading)",
-                margin: 0,
-                fontSize: 22,
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "center",
+                gap: 8,
+                flexWrap: "wrap",
               }}
             >
-              Carbon Footprint
-            </h2>
+              <span
+                style={{
+                  fontSize: "clamp(40px, 6vw, 60px)",
+                  fontWeight: 800,
+                  letterSpacing: "-2px",
+                  color: "var(--aero-leaf)",
+                  lineHeight: 1.1,
+                }}
+              >
+                {co2.toFixed(2)}
+              </span>
+
+              <span
+                style={{
+                  fontSize: 20,
+                  color: "var(--aero-text-muted)",
+                  fontWeight: 600,
+                }}
+              >
+                kg CO₂e
+              </span>
+            </div>
 
             <p
               style={{
                 color: "var(--aero-text-muted)",
-                fontSize: 13,
-                margin: "4px 0 0",
+                margin: "10px 0 0",
+                fontSize: 14,
               }}
             >
-              Environmental impact of your flight
+              Estimated emissions per passenger
             </p>
+          </div>
+
+          <div>
+            <div
+              style={{
+                display: "block",
+                color: "var(--aero-text)",
+                fontSize: 14,
+                fontWeight: 600,
+                marginBottom: 10,
+              }}
+            >
+              Cabin class
+            </div>
+
+            <div
+              role="group"
+              aria-label="Cabin class"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: 10,
+              }}
+            >
+              {CABINS.map((cabin) => {
+                const active = selectedCabin === cabin.value;
+
+                return (
+                  <button
+                    key={cabin.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setSelectedCabin(cabin.value)}
+                    style={{
+                      padding: "13px 12px",
+                      borderRadius: "var(--aero-radius-md)",
+                      border: active
+                        ? "1px solid var(--aero-accent)"
+                        : "1px solid var(--aero-glass-border)",
+                      background: active
+                        ? "var(--aero-accent)"
+                        : "var(--aero-glass-strong)",
+                      color: active ? "#ffffff" : "var(--aero-text)",
+                      fontSize: 13,
+                      fontWeight: active ? 700 : 500,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      boxShadow: active
+                        ? "0 4px 16px rgba(30, 130, 220, 0.25)"
+                        : "none",
+                    }}
+                  >
+                    {cabin.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        <span
-          style={{
-            padding: "7px 12px",
-            borderRadius: "var(--aero-radius-pill)",
-            border: "1px solid var(--aero-glass-border)",
-            background: "var(--aero-glass-strong)",
-            color: "var(--aero-text)",
-            fontSize: 12,
-            fontWeight: 600,
-          }}
-        >
-          {tierLabel}
-        </span>
+        <EcoComparison
+          comparisons={emissions.comparisons}
+          selectedCabinCo2={co2}
+          economyCo2={economyCo2}
+        />
       </div>
-
-      <div style={{ textAlign: "center", padding: "12px 0" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "center",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "clamp(40px, 6vw, 60px)",
-              fontWeight: 800,
-              letterSpacing: "-2px",
-              color: "var(--aero-leaf)",
-              lineHeight: 1.1,
-            }}
-          >
-            {co2.toFixed(2)}
-          </span>
-
-          <span
-            style={{
-              fontSize: 20,
-              color: "var(--aero-text-muted)",
-              fontWeight: 600,
-            }}
-          >
-            kg CO₂e
-          </span>
-        </div>
-
-        <p
-          style={{
-            color: "var(--aero-text-muted)",
-            margin: "10px 0 0",
-            fontSize: 14,
-          }}
-        >
-          Estimated emissions per passenger
-        </p>
-      </div>
-
-      <div>
-        <div
-          style={{
-            display: "block",
-            color: "var(--aero-text)",
-            fontSize: 14,
-            fontWeight: 600,
-            marginBottom: 10,
-          }}
-        >
-          Cabin Class
-        </div>
-
-        <div
-          role="group"
-          aria-label="Cabin class"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-            gap: 10,
-          }}
-        >
-          {CABINS.map((cabin) => {
-            const active = selectedCabin === cabin.value;
-
-            return (
-              <button
-                key={cabin.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setSelectedCabin(cabin.value)}
-                style={{
-                  padding: "13px 12px",
-                  borderRadius: "var(--aero-radius-md)",
-                  border: active
-                    ? "1px solid var(--aero-accent)"
-                    : "1px solid var(--aero-glass-border)",
-                  background: active
-                    ? "var(--aero-accent)"
-                    : "var(--aero-glass-strong)",
-                  color: active ? "#ffffff" : "var(--aero-text)",
-                  fontSize: 13,
-                  fontWeight: active ? 700 : 500,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  boxShadow: active
-                    ? "0 4px 16px rgba(30, 130, 220, 0.25)"
-                    : "none",
-                }}
-              >
-                {cabin.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <EcoComparison
-        comparisons={emissions.comparisons}
-        selectedCabinCo2={co2}
-        economyCo2={economyCo2}
-      />
 
       <div
         style={{
           display: "flex",
           alignItems: "flex-start",
+          justifyContent: "center",
           gap: 8,
           paddingTop: 16,
           borderTop: "1px solid var(--aero-glass-border)",
