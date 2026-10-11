@@ -11,6 +11,8 @@ backend/.venv/
 .env
 .env.*
 !.env.example
+# Demo build settings: no secrets, needed by the hosted demo
+!frontend/.env.demo
 
 # Node
 frontend/node_modules/
