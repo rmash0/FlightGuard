@@ -11,6 +11,8 @@ backend/.venv/
 .env
 .env.*
 !.env.example
+# Demo build settings: no secrets, needed by the hosted demo
+!frontend/.env.demo
 
 # Node
 frontend/node_modules/
@@ -27,6 +29,3 @@ Thumbs.db
 
 # BTS on-time CSVs downloaded by backend/ml/train.py
 backend/ml/data/
-
-# Local background music track (may be copyrighted; never commit it)
-frontend/public/audio/bgm.*

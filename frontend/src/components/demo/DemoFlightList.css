@@ -1,0 +1,63 @@
+.glass-panel.demo-flights {
+  margin-top: 20px;
+}
+
+.demo-flights h2 {
+  margin-bottom: 6px;
+}
+
+.demo-flights__group {
+  margin-top: 18px;
+}
+
+.demo-flights__group h3 {
+  margin: 0 0 10px;
+  color: var(--aero-text-muted);
+  font-size: 0.95rem;
+}
+
+.demo-flights__group ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-flights__pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--aero-glass-border);
+  border-radius: var(--aero-radius-pill);
+  color: var(--aero-text);
+  font-size: 0.9rem;
+  text-decoration: none;
+  background-color: var(--aero-glass-strong);
+  box-shadow: inset 0 1px 0 var(--aero-glass-inner);
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.demo-flights__pill strong {
+  color: var(--aero-heading);
+}
+
+.demo-flights__pill span {
+  color: var(--aero-text-muted);
+}
+
+.demo-flights__pill:hover {
+  transform: translateY(-1px);
+  background-color: var(--aero-glass-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-flights__pill {
+    transition: none;
+  }
+}
