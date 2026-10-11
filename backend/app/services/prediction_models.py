@@ -54,6 +54,9 @@ class Flight(BaseModel):
     ] = "unknown"
     aircraft_type: str | None = None
     icao24: str | None = None
+    # Not on the shared flight contract yet. Used when lookup starts sending
+    # AeroDataBox greatCircleDistance; otherwise the predictor computes it.
+    distance_km: float | None = None
 
 
 class DelayReason(schemas.DelayReason):

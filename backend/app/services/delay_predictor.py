@@ -1,12 +1,14 @@
-"""Heuristic delay prediction (v1).
+"""Delay prediction: BTS model when it is trained, heuristic otherwise.
 
-Scores in log-odds so weather, FAA programs, and schedule effects add up
-and the probability stays between 0 and 1. A later BTS model can replace
-the base rate; the live weather and FAA adjustments stay here.
+Scores in log-odds so live weather and FAA programs shift the probability
+without pushing it outside 0–1. With ``delay_model.joblib`` present, the
+base rate comes from the model (carrier, route, month, weekday, hour,
+distance). Only weather and FAA are added on top. Without the file, the
+heuristic starts at the US base rate and adds a small schedule adjustment.
 
-`predict_delay` is what Role B's flight lookup should call. It returns
-None only when the flight itself is missing or unusable. A failed weather
-or FAA fetch still produces a prediction.
+`predict_delay` is what flight lookup calls. It returns None only when the
+flight itself is missing or unusable. A failed weather or FAA fetch still
+produces a prediction.
 """
 
 import json
@@ -18,11 +20,13 @@ from functools import cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import joblib
 from pydantic import BaseModel, ValidationError
 
 from app.clients.faa_status_client import get_airport_events
-from app.clients.memory_cache import MemoryCache
 from app.clients.open_meteo_client import get_forecast
+from app.models.schemas import ModelInfo
+from app.services.cache import TTLCache
 from app.services.prediction_models import (
     AirportStatus,
     AirportWeather,
@@ -35,16 +39,42 @@ from app.services.prediction_models import (
 logger = logging.getLogger(__name__)
 
 # US arrivals are late (15+ minutes) about 20% of the time.
-BASE_LOG_ODDS = math.log(0.20 / 0.80)
+BASE_RATE = 0.20
+BASE_LOG_ODDS = math.log(BASE_RATE / (1 - BASE_RATE))
+# A flat +0.5 from 5–10 pm scored every calm evening near 29% (medium).
+# The real gap over the daytime base is a few points, larger after 7 pm
+# as inbound delays stack. These stay under the 25% medium cutoff on a
+# calm weekday; Friday and summer still add their own small bump.
+EARLY_DELTA = -0.4
+EARLY_EVENING_DELTA = 0.12  # 17:00–18:59 local → about 22%
+LATE_EVENING_DELTA = 0.20  # 19:00–21:59 local → about 23%
+DAY_SEASON_DELTA = 0.2
 PREDICTION_TTL_SECONDS = 5 * 60
 AIRPORT_TTL_SECONDS = 3 * 60
 FAA_WINDOW = timedelta(hours=6)
 FORECAST_LIMIT = timedelta(days=16)
+MODEL_NAME = "bts-gbm-v1"
+HEURISTIC_NAME = "heuristic-v1"
+# Typical minutes late when a ground stop or airline-affecting closure
+# is active and the feed does not publish an average.
+GROUND_STOP_MINUTES = 60
+CLOSURE_MINUTES = 90
 
-AIRPORTS_FILE = Path(__file__).resolve().parents[1] / "data" / "airports.json"
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+AIRPORTS_FILE = DATA_DIR / "airports.json"
+MODEL_PATH = DATA_DIR / "delay_model.joblib"
+ROUTE_STATS_PATH = DATA_DIR / "route_stats.json"
+MODEL_META_PATH = DATA_DIR / "model_meta.json"
 
-# Hubs with checked time zones. Role D's airports.json (no `tz` field) covers
-# every other US airport; its zone is estimated from coordinates.
+CAUSE_PHRASE = {
+    "carrier": "the airline",
+    "weather": "weather",
+    "nas": "air traffic",
+    "late_aircraft": "a late incoming aircraft",
+}
+
+# Hubs with checked time zones. airports.json has no `tz` field; every
+# other US airport's zone is estimated from coordinates.
 DEMO_AIRPORTS: dict[str, dict[str, str | float]] = {
     "ATL": {
         "name": "Hartsfield-Jackson Atlanta Intl",
@@ -114,8 +144,8 @@ DEMO_AIRPORTS: dict[str, dict[str, str | float]] = {
     },
 }
 
-_prediction_cache = MemoryCache()
-_airport_cache = MemoryCache()
+_prediction_cache: TTLCache[DelayPrediction] = TTLCache()
+_airport_cache: TTLCache[AirportStatus] = TTLCache()
 
 
 @dataclass
@@ -125,11 +155,13 @@ class _Contribution:
     impact: str
     delta: float
     delay_minutes: int = 0
+    explain_only: bool = False
 
 
 def clear_caches() -> None:
-    _prediction_cache.clear()
-    _airport_cache.clear()
+    global _prediction_cache, _airport_cache
+    _prediction_cache = TTLCache()
+    _airport_cache = TTLCache()
 
 
 def pick_hour(payload: dict, moment: datetime) -> dict | None:
@@ -216,10 +248,21 @@ def score_delay(
     weather_unknown: bool = False,
     weather_out_of_range: bool = False,
     faa_unknown: bool = False,
+    base_probability: float | None = None,
+    model_name: str = HEURISTIC_NAME,
+    history: _Contribution | None = None,
+    history_baseline: dict | None = None,
+    hour_note: _Contribution | None = None,
 ) -> DelayPrediction:
-    """Turn already-fetched signals into a DelayPrediction. No I/O."""
+    """Turn already-fetched signals into a DelayPrediction. No I/O.
+
+    ``base_probability`` replaces the 20% heuristic base. The BTS model
+    path sets it and skips schedule adjustments, which the model already
+    learned. ``history`` is an explanation only; it does not move the score.
+    """
     departure = _aware(departure)
     now = _aware(now)
+    use_model = model_name == MODEL_NAME
     contributions: list[_Contribution] = []
 
     if not weather_out_of_range:
@@ -251,9 +294,15 @@ def score_delay(
                 )
             )
 
-    contributions.extend(_schedule_contributions(departure))
+    if not use_model:
+        contributions.extend(_schedule_contributions(departure))
+    if history is not None:
+        contributions.append(history)
+    if hour_note is not None and use_model:
+        contributions.append(hour_note)
 
-    probability = _sigmoid(BASE_LOG_ODDS + sum(item.delta for item in contributions))
+    base = BASE_LOG_ODDS if base_probability is None else _logit(_clip_probability(base_probability))
+    probability = _sigmoid(base + sum(item.delta for item in contributions if not item.explain_only))
     shown = round(probability, 2)
     if shown < 0.25:
         risk = "low"
@@ -262,15 +311,15 @@ def score_delay(
     else:
         risk = "high"
 
-    faa_delay = max((item.delay_minutes for item in contributions), default=0)
-    estimate = round(probability * 45)
-    if faa_delay > estimate:
-        estimate = faa_delay
-
     return DelayPrediction(
         risk=risk,
         probability_delayed=shown,
-        estimated_delay_minutes=estimate,
+        estimated_delay_minutes=_estimate_minutes(
+            probability,
+            contributions,
+            history_baseline,
+            anchor_probability=base_probability,
+        ),
         reported_delay_minutes=reported_delay_minutes,
         reasons=_reasons(
             contributions,
@@ -278,7 +327,7 @@ def score_delay(
             weather_out_of_range=weather_out_of_range,
             faa_unknown=faa_unknown,
         ),
-        model="heuristic-v1",
+        model=MODEL_NAME if use_model else HEURISTIC_NAME,
     )
 
 
@@ -292,18 +341,22 @@ async def predict_delay(flight: Flight | dict | None) -> DelayPrediction | None:
     if parsed is None:
         return None
 
-    cache_key = f"{parsed.number}|{parsed.date}"
-    cached = _prediction_cache.get(cache_key)
-    if isinstance(cached, DelayPrediction):
-        return cached
+    cache_key = (
+        parsed.number,
+        parsed.date,
+        parsed.scheduled_departure,
+        parsed.origin.iata.upper(),
+        parsed.destination.iata.upper(),
+    )
+
+    async def build() -> DelayPrediction:
+        return await _predict_uncached(parsed)
 
     try:
-        prediction = await _predict_uncached(parsed)
+        return await _prediction_cache.get_or_set(cache_key, PREDICTION_TTL_SECONDS, build)
     except Exception:
         logger.exception("delay prediction failed for %s", parsed.number)
         return None
-    _prediction_cache.set(cache_key, prediction, PREDICTION_TTL_SECONDS)
-    return prediction
 
 
 async def airport_status(iata: str) -> AirportStatus | None:
@@ -313,17 +366,14 @@ async def airport_status(iata: str) -> AirportStatus | None:
     if airport is None:
         return None
 
-    cached = _airport_cache.get(code)
-    if isinstance(cached, AirportStatus):
-        return cached
+    async def build() -> AirportStatus:
+        return await _airport_status_uncached(code, airport)
 
     try:
-        status = await _airport_status_uncached(code, airport)
+        return await _airport_cache.get_or_set(code, AIRPORT_TTL_SECONDS, build)
     except Exception:
         logger.exception("airport status failed for %s", code)
         return None
-    _airport_cache.set(code, status, AIRPORT_TTL_SECONDS)
-    return status
 
 
 def find_airport(code: str) -> dict[str, str | float] | None:
@@ -418,6 +468,8 @@ async def _predict_uncached(flight: Flight) -> DelayPrediction:
             faa_unknown = True
             faa_events = {}
 
+    model_probability = _model_probability(flight, departure)
+    history, baseline = _history(flight, departure)
     return score_delay(
         origin_iata=flight.origin.iata,
         destination_iata=flight.destination.iata,
@@ -431,6 +483,11 @@ async def _predict_uncached(flight: Flight) -> DelayPrediction:
         weather_unknown=weather_unknown,
         weather_out_of_range=weather_out_of_range,
         faa_unknown=faa_unknown,
+        base_probability=model_probability,
+        model_name=MODEL_NAME if model_probability is not None else HEURISTIC_NAME,
+        history=history if model_probability is not None else None,
+        history_baseline=baseline,
+        hour_note=_hour_note(departure) if model_probability is not None else None,
     )
 
 
@@ -578,6 +635,7 @@ def _score_faa_event(iata: str, event: dict, factor: str) -> _Contribution | Non
             f"Ground stop at {iata} ({reason})",
             "high",
             2.5,
+            delay_minutes=GROUND_STOP_MINUTES,
         )
     if kind == "closure":
         # The feed's "closures" are often GA-only restrictions, which don't
@@ -585,7 +643,13 @@ def _score_faa_event(iata: str, event: dict, factor: str) -> _Contribution | Non
         # left out of the score.
         if not _closure_affects_airlines(reason):
             return None
-        return _Contribution(factor, f"Airport closure at {iata}", "high", 2.5)
+        return _Contribution(
+            factor,
+            f"Airport closure at {iata}",
+            "high",
+            2.5,
+            delay_minutes=CLOSURE_MINUTES,
+        )
     if kind == "ground_delay":
         return _Contribution(
             factor,
@@ -613,13 +677,22 @@ def _closure_affects_airlines(reason: str) -> bool:
 def _schedule_contributions(departure: datetime) -> list[_Contribution]:
     found: list[_Contribution] = []
     hour = departure.hour
-    if 17 <= hour <= 21:
+    if 17 <= hour <= 18:
         found.append(
             _Contribution(
                 "time_of_day",
-                "Evening departures (5–10 pm local) run later on average",
+                "Early-evening departures (5–7 pm local) are a little later on average",
                 "low",
-                0.5,
+                EARLY_EVENING_DELTA,
+            )
+        )
+    elif 19 <= hour <= 21:
+        found.append(
+            _Contribution(
+                "time_of_day",
+                "Later evening departures (7–10 pm local) pick up some delay as the day stacks up",
+                "low",
+                LATE_EVENING_DELTA,
             )
         )
     elif hour < 9:
@@ -628,7 +701,7 @@ def _schedule_contributions(departure: datetime) -> list[_Contribution]:
                 "time_of_day",
                 "Early morning departures are delayed less often",
                 "low",
-                -0.4,
+                EARLY_DELTA,
             )
         )
 
@@ -650,7 +723,7 @@ def _schedule_contributions(departure: datetime) -> list[_Contribution]:
             detail = f"{bits[0]} departures add a little delay risk"
         else:
             detail = f"{' and '.join(bits)} add a little delay risk"
-        found.append(_Contribution(factor, detail, "low", 0.2))
+        found.append(_Contribution(factor, detail, "low", DAY_SEASON_DELTA))
     return found
 
 
@@ -661,15 +734,20 @@ def _reasons(
     weather_out_of_range: bool,
     faa_unknown: bool,
 ) -> list[DelayReason]:
-    ranked = sorted(contributions, key=lambda item: abs(item.delta), reverse=True)
-    selected = [
-        DelayReason(factor=item.factor, detail=item.detail, impact=item.impact)
-        for item in ranked
-        if item.delta != 0
-    ][:3]
+    explain = [item for item in contributions if item.explain_only]
+    ranked = sorted(
+        (item for item in contributions if not item.explain_only and item.delta != 0),
+        key=lambda item: abs(item.delta),
+        reverse=True,
+    )
+    reasons = [
+        DelayReason(factor=item.factor, detail=item.detail, impact=item.impact) for item in ranked[:3]
+    ]
+    reasons.extend(
+        DelayReason(factor=item.factor, detail=item.detail, impact=item.impact) for item in explain
+    )
 
-    if selected:
-        reasons = list(selected)
+    if ranked:
         if weather_out_of_range:
             reasons.append(
                 DelayReason(
@@ -706,7 +784,8 @@ def _reasons(
     else:
         detail = "No weather or airport issues expected"
         factor = "time_of_day"
-    return [DelayReason(factor=factor, detail=detail, impact="low")]
+    reasons.append(DelayReason(factor=factor, detail=detail, impact="low"))
+    return reasons
 
 
 def _faa_applies(departure: datetime, now: datetime) -> bool:
@@ -750,6 +829,221 @@ def _aware(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value
+
+
+def model_info() -> ModelInfo:
+    """Accuracy and hourly delay rates for the About page. Heuristic if untrained."""
+    if not MODEL_META_PATH.exists():
+        return ModelInfo(
+            model=HEURISTIC_NAME,
+            test_auc=None,
+            base_rate=BASE_RATE,
+            train_months=[],
+            calibration_month=None,
+            test_month=None,
+            months=[],
+            hourly_delay_rate=[],
+        )
+    return ModelInfo.model_validate(json.loads(MODEL_META_PATH.read_text(encoding="utf-8")))
+
+
+def _model_probability(flight: Flight, departure: datetime) -> float | None:
+    artifact = _model_artifact()
+    if artifact is None:
+        return None
+    # BTS covers US domestic flights only. An international leg has an
+    # unseen airport and a distance far outside training, so the heuristic
+    # is the more honest answer there.
+    if find_airport(flight.origin.iata.strip().upper()) is None or (
+        find_airport(flight.destination.iata.strip().upper()) is None
+    ):
+        return None
+    categories = artifact["categories"]
+    features = [
+        _category_code(categories["carrier"], flight.airline.iata.strip().upper(), allow_other=False),
+        _category_code(categories["origin"], flight.origin.iata.strip().upper(), allow_other=True),
+        _category_code(categories["dest"], flight.destination.iata.strip().upper(), allow_other=True),
+        float(departure.month),
+        float(departure.weekday()),
+        float(departure.hour),
+        _distance_miles(flight),
+    ]
+    try:
+        raw = float(artifact["model"].predict_proba([features])[0, 1])
+        calibrator = artifact.get("calibrator")
+        if calibrator is not None:
+            raw = float(calibrator.predict([raw])[0])
+    except Exception:
+        logger.exception("BTS model prediction failed for %s; using the heuristic", flight.number)
+        return None
+    if math.isnan(raw):
+        return None
+    return _clip_probability(raw)
+
+
+def _history(flight: Flight, departure: datetime) -> tuple[_Contribution | None, dict | None]:
+    """Route sentence plus the baseline used to scale expected minutes."""
+    stats = _route_stats()
+    if not stats:
+        return None, None
+    route = stats["routes"].get(f"{flight.origin.iata.upper()}-{flight.destination.iata.upper()}")
+    hour_rows = stats.get("hours") or []
+    hour = next((row for row in hour_rows if row.get("hour") == departure.hour), None)
+    baseline = route or hour
+    if not isinstance(baseline, dict) or not baseline.get("flights"):
+        return None, None
+    if route is None:
+        return None, baseline
+    percent = round(float(route["delay_rate"]) * 100)
+    cause = CAUSE_PHRASE.get(str(route.get("dominant_cause") or ""))
+    if cause:
+        detail = (
+            f"Historically {percent}% of {flight.origin.iata.upper()}→"
+            f"{flight.destination.iata.upper()} flights arrive late, most often from {cause}"
+        )
+    else:
+        detail = (
+            f"Historically {percent}% of {flight.origin.iata.upper()}→"
+            f"{flight.destination.iata.upper()} flights arrive late"
+        )
+    impact = "medium" if float(route["delay_rate"]) >= 0.35 else "low"
+    reason = _Contribution("historical_route", detail, impact, 0.0, explain_only=True)
+    return reason, baseline
+
+
+def _hour_note(departure: datetime) -> _Contribution | None:
+    """National BTS delay rate for this local departure hour, when it stands out."""
+    stats = _route_stats()
+    if not stats:
+        return None
+    row = next((item for item in stats.get("hours") or [] if item.get("hour") == departure.hour), None)
+    if not isinstance(row, dict) or int(row.get("flights") or 0) < 1000:
+        return None
+    rate = float(row.get("delay_rate") or 0.0)
+    percent = round(rate * 100)
+    label = _hour_label(departure.hour)
+    if rate >= 0.30:
+        detail = (
+            f"Flights leaving around {label} are among the latest of the day: "
+            f"{percent}% arrive late nationally"
+        )
+    elif rate <= 0.12:
+        detail = f"Early departures run on time more often: {percent}% of flights around {label} arrive late"
+    else:
+        return None
+    return _Contribution("time_of_day", detail, "low", 0.0, explain_only=True)
+
+
+def _hour_label(hour: int) -> str:
+    if hour == 0:
+        return "midnight"
+    if hour == 12:
+        return "noon"
+    return f"{hour % 12} {'am' if hour < 12 else 'pm'}"
+
+
+def _estimate_minutes(
+    probability: float,
+    contributions: list[_Contribution],
+    baseline: dict | None,
+    anchor_probability: float | None = None,
+) -> int:
+    """Expected minutes late.
+
+    With route history, start from that route's real average lateness and
+    move only halfway toward this departure's own rate. Fully scaling by
+    probability / route rate was too jumpy: a 14% route with a 13 minute
+    average became "expect about 19 minutes" on a slightly later hour.
+    Live weather and FAA add about 50 minutes per extra point of risk,
+    and a published FAA delay replaces the estimate when it is longer.
+    """
+    faa_delay = max(
+        (item.delay_minutes for item in contributions if not item.explain_only),
+        default=0,
+    )
+    estimate = probability * 45
+    anchor = probability if anchor_probability is None else anchor_probability
+    if baseline is not None:
+        rate = baseline.get("delay_rate")
+        mean = baseline.get("mean_delay_minutes")
+        if isinstance(rate, (int, float)) and isinstance(mean, (int, float)) and float(rate) >= 0.05:
+            ratio = anchor / float(rate)
+            damped = 1 + 0.5 * (ratio - 1)
+            damped = min(1.5, max(0.65, damped))
+            estimate = float(mean) * damped
+            estimate += max(0.0, probability - anchor) * 50
+    if faa_delay > estimate:
+        estimate = faa_delay
+    return int(min(max(round(estimate), 0), 180))
+
+
+def _distance_miles(flight: Flight) -> float:
+    distance_km = getattr(flight, "distance_km", None)
+    if isinstance(distance_km, (int, float)) and distance_km > 0:
+        return float(distance_km) * 0.621371
+    return _great_circle_miles(
+        flight.origin.lat,
+        flight.origin.lon,
+        flight.destination.lat,
+        flight.destination.lon,
+    )
+
+
+def _great_circle_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    radius_miles = 3958.8
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lon / 2) ** 2
+    return 2 * radius_miles * math.asin(min(1.0, math.sqrt(a)))
+
+
+def _category_code(mapping: dict[str, int], value: str, *, allow_other: bool) -> float:
+    code = mapping.get(value)
+    if code is not None:
+        return float(code)
+    if allow_other and "OTHER" in mapping:
+        return float(mapping["OTHER"])
+    return float("nan")
+
+
+def _clip_probability(probability: float) -> float:
+    return min(0.93, max(0.02, probability))
+
+
+def _logit(probability: float) -> float:
+    return math.log(probability / (1.0 - probability))
+
+
+@cache
+def _model_artifact() -> dict | None:
+    if not MODEL_PATH.exists():
+        return None
+    try:
+        artifact = joblib.load(MODEL_PATH)
+    except Exception:
+        logger.exception("could not load %s; using the heuristic", MODEL_PATH)
+        return None
+    if not isinstance(artifact, dict) or "model" not in artifact or "categories" not in artifact:
+        logger.warning("delay model file is missing its model or categories")
+        return None
+    logger.info("loaded BTS delay model from %s", MODEL_PATH.name)
+    return artifact
+
+
+@cache
+def _route_stats() -> dict | None:
+    if not ROUTE_STATS_PATH.exists():
+        return None
+    try:
+        payload = json.loads(ROUTE_STATS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        logger.warning("could not read %s", ROUTE_STATS_PATH)
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
 
 
 def _sigmoid(log_odds: float) -> float:

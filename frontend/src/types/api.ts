@@ -122,3 +122,22 @@ export type AirportStatus = {
   risk: RiskLevel;
   reasons: DelayReason[];
 };
+
+// GET /api/predict/model. Accuracy for the About page, plus hourly chart data.
+export type HourlyDelayRate = {
+  hour: number;
+  delay_rate: number;
+  flights: number;
+  mean_delay_minutes: number;
+};
+
+export type ModelInfo = {
+  model: string;
+  test_auc: number | null;
+  base_rate: number | null;
+  train_months: string[];
+  calibration_month: string | null;
+  test_month: string | null;
+  months: string[];
+  hourly_delay_rate: HourlyDelayRate[];
+};
