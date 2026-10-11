@@ -7,7 +7,7 @@ function SearchPage() {
   return (
     <>
       <GlassPanel as="section" className="search-hero">
-        <h1>Will your flight be late?</h1>
+        <h1>Will Your Flight Be Late?</h1>
         <p className="text-muted">
           Enter a US airline flight to see its delay risk and carbon footprint.
         </p>

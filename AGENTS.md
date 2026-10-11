@@ -185,7 +185,7 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `hooks/useFlightLookup.ts` wraps `lookupFlight` with loading/error/ready state and `retry()`. `utils/format.ts` has the time, date and duration formatters.
   - The Search nav tab stays highlighted on `/flight/*`.
   - `AboutPage` has an intro, full feature cards (`<FeatureList variant="cards" />`) and data credits. Model accuracy and methodology are still to come.
-  - `MapPage` shows live aircraft and airports. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. `NotFoundPage` is done.
+  - `MapPage` shows live aircraft and airports. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. Dark-mode popup headings use a dark, crisp color against Leaflet's white popup. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
   - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status` and backend `.detail` when available) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
@@ -297,6 +297,7 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 | Delay risk | `--aero-risk-low` / `-medium` / `-high` |
 | Eco | `--aero-eco-low` (green), `--aero-eco-high` (amber) |
 | Glass | `--aero-glass-bg`, `--aero-glass-strong`, `--aero-glass-border`, `--aero-glass-inner`, `--aero-gloss`, `--aero-shadow`, `--aero-blur` |
+| Map popup | `--aero-map-popup-heading` (dark mode) |
 | Shape | `--aero-radius-sm` / `-md` / `-lg` / `-pill` |
 | Focus | `--aero-focus` (box-shadow ring) |
 | Gel | `--aero-gel-primary-*`, `--aero-gel-eco-*` (`-top`, `-bottom`, `-border`, `-glow`) |
