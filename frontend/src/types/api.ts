@@ -45,8 +45,19 @@ export type Flight = {
   icao24: string | null;
 };
 
+export type DelayFactor =
+  | "weather_origin"
+  | "weather_destination"
+  | "faa_origin"
+  | "faa_destination"
+  | "time_of_day"
+  | "day_of_week"
+  | "season"
+  | "historical_route"
+  | "reported_delay";
+
 export type DelayReason = {
-  factor: string;
+  factor: DelayFactor;
   detail: string;
   impact: ImpactLevel;
 };
@@ -76,4 +87,38 @@ export type FlightLookupResponse = {
   flight: Flight;
   prediction: DelayPrediction | null;
   emissions: Emissions | null;
+};
+
+export type LiveFlightDetails = {
+  flight_number: string | null;
+  origin: string | null;
+  destination: string | null;
+};
+
+export type FaaEventType = "ground_stop" | "ground_delay" | "general_delay" | "closure";
+
+export type FaaEvent = {
+  type: FaaEventType;
+  reason: string;
+  avg_minutes: number | null;
+  max_minutes: number | null;
+  end_time: string | null;
+};
+
+export type AirportWeather = {
+  time: string | null;
+  weather_code: number | null;
+  description: string;
+  wind_gusts_kt: number | null;
+  visibility_m: number | null;
+  precipitation_mm: number | null;
+};
+
+export type AirportStatus = {
+  iata: string;
+  name: string;
+  weather: AirportWeather | null;
+  faa_events: FaaEvent[];
+  risk: RiskLevel;
+  reasons: DelayReason[];
 };

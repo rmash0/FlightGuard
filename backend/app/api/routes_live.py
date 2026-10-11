@@ -1,11 +1,14 @@
 import logging
 import math
+import re
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 
 from app.clients.opensky_client import get_aircraft_in_area
+from app.models.schemas import LiveFlightDetails
 from app.services.cache import TTLCache
+from app.services.live_flight_details import get_live_flight_details
 
 router = APIRouter(prefix="/flights", tags=["Live Map"])
 
@@ -112,3 +115,16 @@ async def live_aircraft(
         **result,
         "flights": filtered_flights,
     }
+
+
+@router.get("/live/{icao24}/details", response_model=LiveFlightDetails)
+async def live_aircraft_details(
+    icao24: str,
+    callsign: str = Query("", max_length=8),
+) -> LiveFlightDetails:
+    if not re.fullmatch(r"[0-9a-fA-F]{6}", icao24):
+        raise HTTPException(status_code=422, detail="Invalid aircraft identifier")
+    normalized_callsign = "".join(callsign.upper().split())
+    if normalized_callsign and not re.fullmatch(r"[A-Z0-9]{1,8}", normalized_callsign):
+        raise HTTPException(status_code=422, detail="Invalid callsign")
+    return await get_live_flight_details(icao24.lower(), normalized_callsign)

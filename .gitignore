@@ -24,3 +24,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# BTS on-time CSVs downloaded by backend/ml/train.py
+backend/ml/data/

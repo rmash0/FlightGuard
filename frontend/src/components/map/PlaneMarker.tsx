@@ -1,6 +1,9 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
+
+import { getLiveFlightDetails } from "../../api/client";
+import type { LiveFlightDetails } from "../../types/api";
 
 export type LiveAircraft = {
   icao24: string;
@@ -18,6 +21,35 @@ type PlaneMarkerProps = {
 };
 
 function PlaneMarker({ aircraft }: PlaneMarkerProps) {
+  const [details, setDetails] = useState<LiveFlightDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const requested = useRef(false);
+  const requestController = useRef<AbortController | null>(null);
+
+  useEffect(() => () => requestController.current?.abort(), []);
+
+  const handlePopupOpen = useCallback(() => {
+    if (requested.current) return;
+    requested.current = true;
+    const controller = new AbortController();
+    requestController.current = controller;
+    setDetailsLoading(true);
+
+    void getLiveFlightDetails(aircraft.icao24, aircraft.callsign, controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) setDetails(result);
+      })
+      .catch(() => {
+        // OpenSky still supplies altitude and speed if route enrichment fails.
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDetailsLoading(false);
+      });
+  }, [aircraft.icao24, aircraft.callsign]);
+
+  const detailValue = (value: string | null | undefined) =>
+    detailsLoading ? "Looking up..." : value || "Unavailable";
+
   const icon = useMemo(() => {
     const heading = aircraft.heading ?? 0;
 
@@ -89,7 +121,11 @@ function PlaneMarker({ aircraft }: PlaneMarkerProps) {
   };
 
   return (
-    <Marker position={[aircraft.latitude, aircraft.longitude]} icon={icon}>
+    <Marker
+      position={[aircraft.latitude, aircraft.longitude]}
+      icon={icon}
+      eventHandlers={{ popupopen: handlePopupOpen }}
+    >
       <Popup>
         <div
           style={{
@@ -105,14 +141,19 @@ function PlaneMarker({ aircraft }: PlaneMarkerProps) {
               color: "var(--aero-heading)",
             }}
           >
-            {aircraft.callsign || "Unknown Flight"}
+            {details?.flight_number || aircraft.callsign || "Live aircraft"}
           </h3>
 
           <div style={{ display: "grid", gap: 7 }}>
             <div>
-              <strong>Aircraft ID:</strong> {aircraft.icao24}
+              <strong>Flight number:</strong> {detailValue(details?.flight_number)}
             </div>
-
+            <div>
+              <strong>Origin:</strong> {detailValue(details?.origin)}
+            </div>
+            <div>
+              <strong>Destination:</strong> {detailValue(details?.destination)}
+            </div>
             <div>
               <strong>Altitude:</strong> {formatAltitude(aircraft.altitude)}
             </div>
@@ -126,10 +167,6 @@ function PlaneMarker({ aircraft }: PlaneMarkerProps) {
               {aircraft.heading !== null
                 ? `${Math.round(aircraft.heading)}°`
                 : "Unknown"}
-            </div>
-
-            <div>
-              <strong>Country:</strong> {aircraft.origin_country}
             </div>
           </div>
         </div>

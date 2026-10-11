@@ -149,9 +149,16 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
 - `GET /` and `GET /api/health` → `{"status": "ok"}`.
 - `api/routes_flights.py`: `GET /api/flights/demo` returns one hard-coded demo flight.
 - `GET /api/flights/lookup` accepts supported US passenger airline codes only and requires the origin or destination to be in the US. It caches successful lookups for 10 minutes and returns clear 404/422/502/503 errors. Live mode needs `AERODATABOX_API_KEY`.
-- `models/schemas.py` mirrors the TypeScript lookup contract. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Live lookup calls Role D's emissions service; prediction remains `null` until Role C adds its service hook below.
+- `models/schemas.py` mirrors the TypeScript lookup contract. `DEMO_MODE=true` serves the **synthetic** `DL1234`/`2026-10-11` fixture without an API key. Live lookup calls Role D's emissions service; prediction remains `null` until Role C's `predict_delay` is called from lookup.
 - `services/cache.py` provides an in-process async TTL cache with one in-flight fetch per key. Each backend process has its own cache.
-- `clients/opensky_client.py`: `get_aircraft_in_area(lamin, lamax, lomin, lomax)` calls OpenSky anonymously. Not wired to a route.
+- `GET /api/flights/live` serves OpenSky aircraft within the map viewport from a 60-second backend cache.
+- `GET /api/flights/live/{icao24}/details` looks up flight number and origin/destination via AeroDataBox only when a plane popup opens. Results, including unavailable matches, are cached for 10 minutes per aircraft and callsign; an unconfirmed route is never guessed.
+- `services/delay_predictor.py`: `predict_delay(flight)` is called by live lookup, so `/api/flights/lookup` returns a real heuristic prediction (`model: "heuristic-v1"`). Demo-mode lookup still serves the fixture's recorded prediction.
+- `api/routes_predict.py`: `GET /api/predict?number=&date=` resolves the flight through `lookup_flight`, then returns `predict_delay`'s `DelayPrediction`. If lookup has no data (no API key, or no demo fixture for that date), `DL1234` still resolves from a sample schedule.
+- `api/routes_airports.py`: `GET /api/airports/{iata}` returns weather, FAA events, and delay risk for any airport in Role D's `data/airports.json`. The local time zone is estimated from coordinates, except for 11 hubs with checked zones. Role D still owns `GET /api/airports` (the list).
+- `clients/open_meteo_client.py`: hourly forecast for several airports in one call. Cached about 45 minutes. `DEMO_MODE` replays `data/fixtures/open_meteo_rdu_atl.json` (a real RDU+ATL response).
+- `clients/faa_status_client.py`: parses FAA NAS Status XML into events keyed by airport. Cached about 3 minutes. `DEMO_MODE` replays `data/fixtures/faa_nas_stormy.xml`. A recorded live response is in `faa_nas_live.xml`.
+- `services/prediction_models.py`: Pydantic models for the airport-status shape. Its `DelayPrediction`/`DelayReason` subclass the ones in `models/schemas.py` (adding the `factor` enum), so lookup accepts them.
 
 **Frontend** (`frontend/src/`)
 - **Routing:** React Router v8 is set up in `main.tsx` (`BrowserRouter`) and `App.tsx`. Every route from §8 exists, inside `components/Layout.tsx` (header + nav + `<Outlet />`).
@@ -173,10 +180,10 @@ Copy `backend/.env.example` → `backend/.env` and fill in values. Add Python de
   - `hooks/useFlightLookup.ts` wraps `lookupFlight` with loading/error/ready state and `retry()`. `utils/format.ts` has the time, date and duration formatters.
   - The Search nav tab stays highlighted on `/flight/*`.
   - `AboutPage` has an intro, full feature cards (`<FeatureList variant="cards" />`) and data credits. Model accuracy and methodology are still to come.
-  - `MapPage` is a placeholder. `NotFoundPage` is done.
+  - `MapPage` shows live aircraft and airports. Plane popups load the passenger flight number and route on demand, with unavailable fallbacks. `NotFoundPage` is done.
   - `components/features/FeatureList.tsx` holds the feature copy (title, text, orb color) in one place for both pages.
 - **API:**
-  - `api/client.ts` has `lookupFlight(number, date, signal?)` and `ApiError` (with `.status`), plus the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
+  - `api/client.ts` has `lookupFlight(number, date, signal?)`, `getLiveAircraft`, and `getLiveFlightDetails`, plus `ApiError` (with `.status`) and the `VITE_USE_MOCKS` switch (see `frontend/.env.example`).
   - **Mock test flights** (mocks only):
     - `ZZ404`, `ZZ502`, `ZZ503` return those errors.
     - `ZZ1` has `null` prediction and emissions.
@@ -314,10 +321,13 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 | GET | `/api/predict?number=...&date=...` | Prediction | `DelayPrediction` |
 | GET | `/api/eco/emissions?carrier=DL&number=1234&origin=RDU&destination=ATL&date=...` | Eco | `Emissions` |
 | GET | `/api/flights/live?lamin&lamax&lomin&lomax` | Eco/Map | live aircraft (cached) |
+| GET | `/api/flights/live/{icao24}/details?callsign=DAL214` | Eco/Map | `LiveFlightDetails` (below), fetched on popup open |
 | GET | `/api/airports` | Eco/Map | trimmed US airport list |
 | GET | `/api/airports/{iata}` | Prediction | weather + FAA status + risk |
 
 `/api/flights/lookup` calls the flight client and then the prediction and emissions services. The frontend makes **one call** for the results page.
+
+`LiveFlightDetails` has `flight_number`, `origin`, and `destination`, each a nullable string. For example: `{ "flight_number": "DL214", "origin": "ATL — Hartsfield-Jackson Atlanta International Airport", "destination": "FCO — Leonardo da Vinci International Airport" }`. When the provider cannot confirm that an active flight matches both the aircraft and callsign, all three fields are `null`. The map keeps altitude, speed, and heading from OpenSky without a details lookup until the popup opens.
 
 **Backend service hooks:** Role C exposes `async predict_delay(flight: Flight) -> DelayPrediction | None` in `services/delay_predictor.py`. Role D exposes `async get_emissions_for_flight(flight: Flight) -> Emissions | None` in `services/emissions.py`. The lookup route calls either when its module exists; a failure in one service yields `null` for that field.
 
@@ -363,6 +373,32 @@ Output: `risk` (low/medium/high), `probability_delayed`, `estimated_delay_minute
 - `risk`: `low | medium | high`. `impact`: `low | medium | high`
 - `estimate_tier`: `flight | route | distance | fallback`
 - `prediction` and `emissions` can be `null` if that service fails. The UI must handle this gracefully.
+- Delay `factor` values: `weather_origin`, `weather_destination`, `faa_origin`, `faa_destination`, `time_of_day`, `day_of_week`, `season`, `historical_route`, `reported_delay`.
+
+### `AirportStatus` (`GET /api/airports/{iata}`)
+Served by Role C. Lookup models are in `models/schemas.py`. The airport-status models are in `services/prediction_models.py` until they move there. `faa_events` is empty when the FAA feed has nothing for that airport. `weather` is `null` when the forecast is missing. GA-only closures stay in `faa_events` and are left out of the risk score.
+```json
+{
+  "iata": "ATL",
+  "name": "Hartsfield-Jackson Atlanta Intl",
+  "weather": {
+    "time": "2026-10-11T19:00Z",
+    "weather_code": 95,
+    "description": "Thunderstorm",
+    "wind_gusts_kt": 32,
+    "visibility_m": 4000,
+    "precipitation_mm": 6.1
+  },
+  "faa_events": [
+    { "type": "ground_delay", "reason": "thunderstorms", "avg_minutes": 72, "max_minutes": 125, "end_time": null }
+  ],
+  "risk": "high",
+  "reasons": [
+    { "factor": "faa_origin", "detail": "Ground delay program at ATL (avg 72 min, thunderstorms)", "impact": "high" }
+  ]
+}
+```
+- `faa_events[].type`: `ground_stop | ground_delay | general_delay | closure`
 
 ### Backend layout
 ```
